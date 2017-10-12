@@ -12,14 +12,14 @@ bgfx 已有一个 lua api binding ，但是我不太满意，所以自己重新�
 编译
 =====
 
-编译这个库需要先编译好 bgfx 静态库。
+编译这个库需要先编译好 bgfx 静态库，如果你只想测试 lua 部分，可以下载[预编译版本](https://github.com/cloudwu/lua-bgfx/releases) 。
 
 运行
 =====
 
 需要在源码当前目录运行 iup.exe 0x-xxx.lua ，资源目录 meshes/shaders/textures 必须在当前目录。它们是从 bgfx/examples/runtime 拷贝过来。
 
-iup 基于 https://github.com/cloudwu/iupmingw/ 编译，可以自己编译，也可以下载预编译好的版本 (windows 64bit)。
+iup 基于 https://github.com/cloudwu/iupmingw/ 编译，可以自己编译，也可以 [下载预编译好的版本](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) (windows 64bit)。
 
 LICENSE
 =====
