@@ -51,14 +51,12 @@ local function notsupported()
 	bgfx.frame()
 end
 
-local init
-
 local function init(canvas)
 	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 --	bgfx.set_debug "ST"
 
-	ctx.prog = util.load_program("vs_instancing", "fs_instancing")
+	ctx.prog = util.programLoad("vs_instancing", "fs_instancing")
 	ctx.state = bgfx.make_state {}
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },

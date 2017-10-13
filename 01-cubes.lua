@@ -35,8 +35,6 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local init
-
 local function init(canvas)
 	ant.init {
 		nwh = iup.GetAttributeData(canvas,"HWND"),
@@ -46,7 +44,7 @@ local function init(canvas)
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 --	bgfx.set_debug "ST"
 
-	ctx.prog = util.load_program("vs_cubes", "fs_cubes")
+	ctx.prog = util.programLoad("vs_cubes", "fs_cubes")
 
 	ctx.state = bgfx.make_state {
 		PT = "TRISTRIP"

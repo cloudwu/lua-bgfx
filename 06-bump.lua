@@ -81,8 +81,6 @@ local function mainloop_instancing()
 	bgfx.frame()
 end
 
-local init
-
 local function init(canvas)
 	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
@@ -171,11 +169,11 @@ local function init(canvas)
 	math3d.vector(4, ctx.lightRgbInnerR):pack(1.0, 0.4, 0.2, 0.8)
 
 	if ant.caps.supported.INSTANCING then
-		ctx.prog = util.load_program("vs_bump_instanced", "fs_bump")
+		ctx.prog = util.programLoad("vs_bump_instanced", "fs_bump")
 		ctx.idb = bgfx.instance_buffer "m"
 		ant.mainloop(mainloop_instancing)
 	else
-		ctx.prog = util.load_program("vs_bump", "fs_bump")
+		ctx.prog = util.programLoad("vs_bump", "fs_bump")
 		ant.mainloop(mainloop)
 	end
 end

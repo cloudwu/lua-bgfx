@@ -33,7 +33,7 @@ do
 		return h
 	end
 
-	function util.load_program(vs,fs)
+	function util.programLoad(vs,fs)
 		local vsid = load_shader(vs)
 		local fsid = fs and load_shader(fs)
 		return bgfx.create_program(vsid, fsid, true)

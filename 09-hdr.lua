@@ -294,8 +294,6 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local init
-
 local function init(canvas)
 	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
 --	bgfx.set_debug "ST"
@@ -316,13 +314,13 @@ local function init(canvas)
 	ctx.mesh_state = bgfx.make_state {	CULL = "CCW" }
 
 	ctx.m_uffizi = util.textureLoad("textures/uffizi.dds", 0, "ucvcwc")	-- BGFX_TEXTURE_U_CLAMP | BGFX_TEXTURE_V_CLAMP | BGFX_TEXTURE_W_CLAMP
-	ctx.m_skyProgram     = util.load_program("vs_hdr_skybox",  "fs_hdr_skybox")
-	ctx.m_lumProgram     = util.load_program("vs_hdr_lum",     "fs_hdr_lum")
-	ctx.m_lumAvgProgram  = util.load_program("vs_hdr_lumavg",  "fs_hdr_lumavg")
-	ctx.m_blurProgram    = util.load_program("vs_hdr_blur",    "fs_hdr_blur")
-	ctx.m_brightProgram  = util.load_program("vs_hdr_bright",  "fs_hdr_bright")
-	ctx.m_meshProgram    = util.load_program("vs_hdr_mesh",    "fs_hdr_mesh")
-	ctx.m_tonemapProgram = util.load_program("vs_hdr_tonemap", "fs_hdr_tonemap")
+	ctx.m_skyProgram     = util.programLoad("vs_hdr_skybox",  "fs_hdr_skybox")
+	ctx.m_lumProgram     = util.programLoad("vs_hdr_lum",     "fs_hdr_lum")
+	ctx.m_lumAvgProgram  = util.programLoad("vs_hdr_lumavg",  "fs_hdr_lumavg")
+	ctx.m_blurProgram    = util.programLoad("vs_hdr_blur",    "fs_hdr_blur")
+	ctx.m_brightProgram  = util.programLoad("vs_hdr_bright",  "fs_hdr_bright")
+	ctx.m_meshProgram    = util.programLoad("vs_hdr_mesh",    "fs_hdr_mesh")
+	ctx.m_tonemapProgram = util.programLoad("vs_hdr_tonemap", "fs_hdr_tonemap")
 
 	ctx.s_texCube   = bgfx.create_uniform("s_texCube",  "i1")
 	ctx.s_texColor  = bgfx.create_uniform("s_texColor", "i1")

@@ -286,8 +286,6 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local init
-
 local function init(canvas)
 	ant.init {
 		nwh = iup.GetAttributeData(canvas,"HWND"),

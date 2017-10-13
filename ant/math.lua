@@ -74,6 +74,11 @@ function mat:rotmat(x,y,z)
 	return self
 end
 
+function mat:scalemat(x,y,z)
+	v:pack(x,y,z):scalemat(self)
+	return self
+end
+
 -- copy vector3 method to vector4
 local vec = {
 	"normalize",

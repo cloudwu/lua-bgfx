@@ -782,7 +782,7 @@ combine_state(lua_State *L, uint64_t *state) {
 		*state &= ~BGFX_STATE_BLEND_MASK;
 		const char * what = luaL_checkstring(L, -1);
 		if CASE(ADD) *state |= BGFX_STATE_BLEND_ADD;
-		else if CASE(ALPHA) *state |= BGFX_STATE_BLEND_ADD;
+		else if CASE(ALPHA) *state |= BGFX_STATE_BLEND_ALPHA;
 		else if CASE(DARKEN) *state |= BGFX_STATE_BLEND_DARKEN;
 		else if CASE(LIGHTEN) *state |= BGFX_STATE_BLEND_LIGHTEN;
 		else if CASE(MULTIPLY) *state |= BGFX_STATE_BLEND_MULTIPLY;
@@ -2369,14 +2369,20 @@ lcreateTexture2D(lua_State *L) {
 	bgfx_texture_format_t fmt = texture_format_from_string(L, idx++);
 	uint32_t flags = BGFX_TEXTURE_NONE;
 	if (!lua_isnoneornil(L, idx)) {
-		const char * f = lua_tostring(L, idx);
+		const char * f = lua_tostring(L, idx++);
 		flags = get_texture_flags(L, f);
 	}
 	bgfx_texture_handle_t handle;
 	if (scaled) {
 		handle = bgfx_create_texture_2d_scaled(ratio, hasMips, layers, fmt, flags);
 	} else {
-		handle = bgfx_create_texture_2d(width, height, hasMips, layers, fmt, flags, NULL);
+		size_t sz;
+		const char * data = lua_tolstring(L, idx, &sz);
+		const bgfx_memory_t * mem = NULL;
+		if (data) {
+			mem = bgfx_copy(data, sz);
+		}
+		handle = bgfx_create_texture_2d(width, height, hasMips, layers, fmt, flags, mem);
 	}
 	if (invalid_handle(handle)) {
 		return luaL_error(L, "create texture 2d failed");
