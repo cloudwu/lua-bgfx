@@ -40,7 +40,7 @@ local function mainloop()
 	ctx.idb:set()
 	bgfx.set_vertex_buffer(0, ctx.vb)
 	bgfx.set_index_buffer(ctx.ib)
-	bgfx.set_state(ctx.state)
+	bgfx.set_state()
 	bgfx.submit(0, ctx.prog)
 	bgfx.frame()
 end
@@ -57,12 +57,9 @@ local function init(canvas)
 --	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_instancing", "fs_instancing")
-	ctx.state = bgfx.make_state {}
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
-		{ "NORMAL", 4, "UINT8", true, true },
-		{ "TANGENT", 4, "UINT8", true, true },
-		{ "TEXCOORD0", 2, "UINT16", true, true },
+		{ "COLOR0", 4, "UINT8", true },
 	}
 	ctx.vb = bgfx.create_vertex_buffer({
 			"fffd",

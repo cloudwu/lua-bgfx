@@ -31,7 +31,7 @@ local function renderScreenSpaceQuad(minx, miny, width, height)
 	ctx.tb:packV(3, minx, maxy, zz, 0xffffffff, minu, maxv)
 
 	ctx.tb:packI(index)
-	bgfx.set_state(ctx.state)
+	bgfx.set_state()	-- default
 	ctx.tb:set()
 	bgfx.submit(1, ctx.prog)
 end
@@ -63,9 +63,6 @@ local function init(canvas)
 --	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_raymarching", "fs_raymarching")
-
-	ctx.state = bgfx.make_state {}
-
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },

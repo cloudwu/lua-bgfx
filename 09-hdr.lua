@@ -304,14 +304,19 @@ local function init(canvas)
 	}
 	ctx.tvb = bgfx.transient_buffer "fffdff"
 	ctx.state = bgfx.make_state {
---		RGB_WRITE = true,
---		ALPHA_WRITE = true,
-		DEPTH_TEST = "NONE",
+		RGB_WRITE = true,
+		ALPHA_WRITE = true,
 		DEPTH_WRITE = false,
-		CULL = "NONE",
 		MSAA = false,
 	}
-	ctx.mesh_state = bgfx.make_state {	CULL = "CCW" }
+	ctx.mesh_state = bgfx.make_state {
+		RGB_WRITE = true,
+		ALPHA_WRITE = true,
+		DEPTH_TEST = "LESS",
+		DEPTH_WRITE = true,
+		CULL = "CCW",
+		MSAA = true,
+	}
 
 	ctx.m_uffizi = util.textureLoad("textures/uffizi.dds", 0, "ucvcwc")	-- BGFX_TEXTURE_U_CLAMP | BGFX_TEXTURE_V_CLAMP | BGFX_TEXTURE_W_CLAMP
 	ctx.m_skyProgram     = util.programLoad("vs_hdr_skybox",  "fs_hdr_skybox")

@@ -46,9 +46,7 @@ local function init(canvas)
 
 	ctx.prog = util.programLoad("vs_cubes", "fs_cubes")
 
-	ctx.state = bgfx.make_state {
-		PT = "TRISTRIP"
-	}
+	ctx.state = bgfx.make_state({ PT = "TRISTRIP" } , nil)	-- from BGFX_STATE_DEFAULT
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },

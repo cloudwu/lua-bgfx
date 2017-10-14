@@ -137,10 +137,13 @@ end
 local function init(canvas)
 	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
 --	bgfx.set_debug "ST"
-	ctx.stateOpaque = bgfx.make_state {}
+	ctx.stateOpaque = nil -- default
 	ctx.stateTransparent = bgfx.make_state {
+		RGB_WRITE = true,
+		ALPHA_WRITE = true,
+		DEPTH_TEST = "LESS",
+		MSAA = true,
 		CULL = "CCW",
-		DEPTH_WRITE = false,
 		BLEND = "ALPHA",
 	}
 

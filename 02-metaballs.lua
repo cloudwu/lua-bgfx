@@ -524,7 +524,8 @@ local function mainloop()
 	mat:rotmat(time*0.67, time)
 	bgfx.set_transform(mat)
 	ctx.tvb:setV(0, 0, numVertices)
-	bgfx.set_state(ctx.state)
+	bgfx.set_state()	-- default state
+	-- { RGB_WRITE = true , ALPHA_WRITE = true , DEPTH_TEST = "LESS", DEPTH_WRITE = true, CULL = "CW", MSAA = true }
 	bgfx.submit(0, ctx.prog)
 	bgfx.frame()
 end
@@ -537,7 +538,6 @@ local function init(canvas)
 --	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_metaballs", "fs_metaballs")
-	ctx.state = bgfx.make_state {}
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 3, "FLOAT" },

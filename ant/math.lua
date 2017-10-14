@@ -79,9 +79,18 @@ function mat:scalemat(x,y,z)
 	return self
 end
 
+function mat:srt(sx,sy,sz,rx,ry,rz,tx,ty,tz)
+	v:pack(sx,sy,sz):scalemat(self)
+	return self:rot(rx,ry,rz):trans(tx,ty,tz)
+end
+
 -- copy vector3 method to vector4
 local vec = {
 	"normalize",
+	"dot",
+	"cross",
+	"length",
+	"mul",
 }
 
 local function init()

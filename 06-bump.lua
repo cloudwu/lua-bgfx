@@ -93,12 +93,11 @@ local function init(canvas)
 	}
 
 	ctx.state = bgfx.make_state {
---		RGB_WRITE = true,
---		ALPHA_WRITE = true,
---		DEPTH_WRITE = true,
---		DEPTH_TEST = "LESS",
-		CULL = "NONE",
---		MSAA = true,
+		RGB_WRITE = true,
+		ALPHA_WRITE = true,
+		DEPTH_WRITE = true,
+		DEPTH_TEST = "LESS",
+		MSAA = true,
 	}
 
 	local s_cubeIndices =  {
@@ -147,7 +146,7 @@ local function init(canvas)
 			-1.0, -1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0, 0x7fff ,
 			-1.0,  1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff ,
 		},
-		ctx.vdecl , "c" , s_cubeIndices)
+		ctx.vdecl , "t" , s_cubeIndices)
 	ctx.ib = bgfx.create_index_buffer(s_cubeIndices)
 	ctx.s_texColor  = bgfx.create_uniform("s_texColor", "i1")
 	ctx.s_texNormal = bgfx.create_uniform("s_texNormal", "i1")

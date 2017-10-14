@@ -765,7 +765,7 @@ get_blend_func(lua_State *L, char t) {
 
 static int
 combine_state(lua_State *L, uint64_t *state) {
-	if (!lua_isstring(L, -2)) {
+	if (lua_type(L, -2) != LUA_TSTRING) {
 		luaL_error(L, "state key must be string, it's %s", lua_typename(L, lua_type(L, -2)));
 	}
 	const char * what = lua_tostring(L, -2);
@@ -886,6 +886,43 @@ byte2hex(uint8_t c, uint8_t *t) {
 	t[1] = hex[c&0xf];
 }
 
+static int inline
+hex2n(lua_State *L, char c) {
+	if (c>='0' && c<='9')
+		return c-'0';
+	else if (c>='A' && c<='F')
+		return c-'A' + 10;
+	else if (c>='a' && c<='f')
+		return c-'a' + 10;
+	return luaL_error(L, "Invalid state %c", c);
+}
+
+static inline void
+get_state(lua_State *L, int idx, uint64_t *pstate, uint32_t *prgba) {
+	size_t sz;
+	const uint8_t * data = (const uint8_t *)luaL_checklstring(L, idx, &sz);
+	if (sz != 16 && sz != 24) {
+		luaL_error(L, "Invalid state length %d", sz);
+	}
+	uint64_t state = 0;
+	uint32_t rgba = 0;
+	int i;
+	for (i=0;i<15;i++) {
+		state |= hex2n(L,data[i]);
+		state <<= 4;
+	}
+	state |= hex2n(L,data[15]);
+	if (sz == 24) {
+		for (i=0;i<7;i++) {
+			rgba |= hex2n(L,data[16+i]);
+			rgba <<= 4;
+		}
+		rgba |= hex2n(L,data[23]);
+	}
+	*pstate = state;
+	*prgba = rgba;
+}
+
 static int
 lmakeState(lua_State *L) {
 	luaL_checktype(L, 1, LUA_TTABLE);
@@ -898,10 +935,16 @@ lmakeState(lua_State *L) {
 			| BGFX_STATE_MSAA            \
 			)
 */
-	uint64_t state = BGFX_STATE_DEFAULT;
+	uint64_t state = 0;
 	uint32_t rgba = 0;
-	if (lua_isstring(L, 2)) {
+	int t = lua_type(L, 2);
+	switch(t) {
+	case LUA_TSTRING:
 		get_state(L, 2, &state, &rgba);
+		break;
+	case LUA_TNIL:
+		state = BGFX_STATE_DEFAULT;
+		break;
 	}
 	lua_pushnil(L);
 	int blend_factor = 0;
@@ -930,7 +973,7 @@ lmakeState(lua_State *L) {
 
 static int
 lsetState(lua_State *L) {
-	if (lua_isnil(L, 1)) {
+	if (lua_isnoneornil(L, 1)) {
 		bgfx_set_state(BGFX_STATE_DEFAULT, 0);
 	} else {
 		uint64_t state;
@@ -1443,7 +1486,7 @@ calc_targent_vb(lua_State *L, const bgfx_memory_t *mem, bgfx_vertex_decl_t *vd, 
 		w BGFX_BUFFER_COMPUTE_WRITE
 		s BGFX_BUFFER_ALLOW_RESIZE ( for dynamic buffer )
 		d BGFX_BUFFER_INDEX32 ( for index buffer )
-		c todo: calc targent
+		t calc targent
  */
 static int
 lcreateVertexBuffer(lua_State *L) {
@@ -1464,7 +1507,7 @@ lcreateVertexBuffer(lua_State *L) {
 			case 'w':
 				flags |= BGFX_BUFFER_COMPUTE_WRITE;
 				break;
-			case 'c':
+			case 't':
 				calc_targent = 1;
 				break;
 			default:
@@ -2605,6 +2648,76 @@ lreadTexture(lua_State *L) {
 	return 1;
 }
 
+static uint32_t
+stencil_id(lua_State *L) {
+	if (lua_type(L, -2) != LUA_TSTRING) {
+		luaL_error(L, "stencil key must be string, it's %s", lua_typename(L, lua_type(L, -2)));
+	}
+	const char * what = lua_tostring(L, -2);
+	if CASE(TEST) {
+		const char *what = luaL_checkstring(L, -1);
+		if CASE(LESS) return BGFX_STENCIL_TEST_LESS;
+		if CASE(LEQUAL) return BGFX_STENCIL_TEST_LEQUAL;
+		if CASE(EQUAL) return BGFX_STENCIL_TEST_EQUAL;
+		if CASE(GEQUAL) return BGFX_STENCIL_TEST_GEQUAL;
+		if CASE(GREATER) return BGFX_STENCIL_TEST_GREATER;
+		if CASE(NOTEQUAL) return BGFX_STENCIL_TEST_NOTEQUAL;
+		if CASE(NEVER) return BGFX_STENCIL_TEST_NEVER;
+		if CASE(ALWAYS) return BGFX_STENCIL_TEST_ALWAYS;
+		luaL_error(L, "Invalid stencil test %s", what);
+	}
+	if CASE(FUNC_REF) {
+		int r = luaL_checkinteger(L, -1);
+		return BGFX_STENCIL_FUNC_REF(r);
+	}
+	if CASE(FUNC_RMASK) {
+		int rmask = luaL_checkinteger(L, -1);
+		return BGFX_STENCIL_FUNC_RMASK(rmask);
+	}
+	uint32_t v = 0;
+	do {
+		const char * what = luaL_checkstring(L, -1);
+		if CASE(ZERO) v = BGFX_STENCIL_OP_FAIL_S_ZERO;
+		else if CASE(KEEP) v = BGFX_STENCIL_OP_FAIL_S_KEEP;
+		else if CASE(REPLACE) v = BGFX_STENCIL_OP_FAIL_S_REPLACE;
+		else if CASE(INCR) v = BGFX_STENCIL_OP_FAIL_S_INCR;
+		else if CASE(INCRSAT) v = BGFX_STENCIL_OP_FAIL_S_INCRSAT;
+		else if CASE(DECR) v = BGFX_STENCIL_OP_FAIL_S_DECR;
+		else if CASE(DECRSAT) v = BGFX_STENCIL_OP_FAIL_S_DECRSAT;
+		else if CASE(INVERT) v = BGFX_STENCIL_OP_FAIL_S_INVERT;
+		else luaL_error(L, "Invalid stencil op arg %s", what);
+	} while(0);
+	if CASE(OP_FAIL_Z) {
+		v <<= (BGFX_STENCIL_OP_FAIL_Z_SHIFT - BGFX_STENCIL_OP_FAIL_S_SHIFT);
+	} else if CASE(OP_PASS_Z) {
+		v <<= (BGFX_STENCIL_OP_PASS_Z_SHIFT - BGFX_STENCIL_OP_FAIL_S_SHIFT);
+	} else if (!CASE(OP_FAIL_S)) {
+		luaL_error(L, "Invalid stencil arg %s", what);
+	}
+	return v;
+}
+
+static int
+lmakeStencil(lua_State *L) {
+	luaL_checktype(L, 1, LUA_TTABLE);
+	lua_pushnil(L);
+	uint32_t stencil = 0;
+	while (lua_next(L, 1) != 0) {
+		stencil |= stencil_id(L);
+		lua_pop(L, 1);
+	}
+	lua_pushinteger(L, stencil);
+	return 1;
+}
+
+static int
+lsetStencil(lua_State *L) {
+	uint32_t fstencil = (uint32_t)luaL_optinteger(L, 1, BGFX_STENCIL_NONE);
+	uint32_t bstencil = (uint32_t)luaL_optinteger(L, 2, BGFX_STENCIL_NONE);
+	bgfx_set_stencil(fstencil, bstencil);
+	return 0;
+}
+
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
@@ -2662,6 +2775,8 @@ luaopen_bgfx(lua_State *L) {
 		{ "get_texture", lgetTexture },
 		{ "read_texture", lreadTexture },
 		{ "blit", lblit },
+		{ "make_stencil", lmakeStencil },
+		{ "set_stencil", lsetStencil },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
