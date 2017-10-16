@@ -141,8 +141,26 @@ function util.meshSubmit(mesh, id, prog)
 	for i=1,n do
 		local group = g[i]
 		bgfx.set_index_buffer(group.ib)
-		bgfx.set_vertex_buffer(0, group.vb)
+		bgfx.set_vertex_buffer(group.vb)
 		bgfx.submit(id, prog, 0, i ~= n)
+	end
+end
+
+function util.meshSubmitState(mesh, state, mtx)
+	bgfx.set_transform(mtx)
+	bgfx.set_state(state.state)
+
+	for _, texture in ipairs(state.textures) do
+		bgfx.set_texture(texture.stage,texture.sampler,texture.texture,texture.flags)
+	end
+
+	local g = mesh.group
+	local n = #g
+	for i=1,n do
+		local group = g[i]
+		bgfx.set_index_buffer(group.ib)
+		bgfx.set_vertex_buffer(group.vb)
+		bgfx.submit(state.viewId, state.program, 0, i ~= n)
 	end
 end
 

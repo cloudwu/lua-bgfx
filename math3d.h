@@ -114,15 +114,20 @@ vector3_lerp(struct vector3 *v, const struct vector3 *a, const struct vector3 *b
 
 static inline struct quaternion *
 quaternion_mul(struct quaternion *q, const struct quaternion *a, const struct quaternion *b) {
-	float x = a->y * b->z - a->z * b->y + b->x * a->w + a->x * b->w;
-	float y = a->z * b->x - a->x * b->z + b->y * a->w + a->y * b->w;
-	float z = a->x * b->y - a->y * b->x + b->z * a->w + a->z * b->w;
-	float w = a->w * b->w - (a->x * b->x + a->y * b->y + a->z * b->z);
+	const float ax = a->x;
+	const float ay = a->y;
+	const float az = a->z;
+	const float aw = a->w;
 
-	q->x = x;
-	q->y = y;
-	q->z = z;
-	q->w = w;
+	const float bx = b->x;
+	const float by = b->y;
+	const float bz = b->z;
+	const float bw = b->w;
+
+	q->x = aw * bx + ax * bw + ay * bz - az * by;
+	q->y = aw * by - ax * bz + ay * bw + az * bx;
+	q->z = aw * bz + ax * by - ay * bx + az * bw;
+	q->w = aw * bw - ax * bx - ay * by - az * bz;
 
 	return q;
 }
@@ -228,20 +233,43 @@ matrix44_identity(union matrix44 * m) {
 
 static inline union matrix44 *
 matrix44_from_quaternion(union matrix44 *m, const struct quaternion *q) {
-	// Calculate coefficients
-	float x2 = q->x + q->x, y2 = q->y + q->y, z2 = q->z + q->z;
-	float xx = q->x * x2,  xy = q->x * y2,  xz = q->x * z2;
-	float yy = q->y * y2,  yz = q->y * z2,  zz = q->z * z2;
-	float wx = q->w * x2,  wy = q->w * y2,  wz = q->w * z2;
+	const float x = q->x;
+	const float y = q->y;
+	const float z = q->z;
+	const float w = q->w;
 
-	C[0][0] = 1 - (yy + zz);  C[1][0] = xy - wz;	
-	C[2][0] = xz + wy;        C[3][0] = 0;
-	C[0][1] = xy + wz;        C[1][1] = 1 - (xx + zz);
-	C[2][1] = yz - wx;        C[3][1] = 0;
-	C[0][2] = xz - wy;        C[1][2] = yz + wx;
-	C[2][2] = 1 - (xx + yy);  C[3][2] = 0;
-	C[0][3] = 0;              C[1][3] = 0;
-	C[2][3] = 0;              C[3][3] = 1;
+	const float x2  =  x + x;
+	const float y2  =  y + y;
+	const float z2  =  z + z;
+	const float x2x = x2 * x;
+	const float x2y = x2 * y;
+	const float x2z = x2 * z;
+	const float x2w = x2 * w;
+	const float y2y = y2 * y;
+	const float y2z = y2 * z;
+	const float y2w = y2 * w;
+	const float z2z = z2 * z;
+	const float z2w = z2 * w;
+
+	C[0][0] = 1.0f - (y2y + z2z);
+	C[0][1] =         x2y - z2w;
+	C[0][2] =         x2z + y2w;
+	C[0][3] = 0.0f;
+
+	C[1][0] =         x2y + z2w;
+	C[1][1] = 1.0f - (x2x + z2z);
+	C[1][2] =         y2z - x2w;
+	C[1][3] = 0.0f;
+
+	C[2][0] =         x2z - y2w;
+	C[2][1] =         y2z + x2w;
+	C[2][2] = 1.0f - (x2x + y2y);
+	C[2][3] = 0.0f;
+
+	C[3][0] = 0.0f;
+	C[3][1] = 0.0f;
+	C[3][2] = 0.0f;
+	C[3][3] = 1.0f;
 
 	return m;
 }

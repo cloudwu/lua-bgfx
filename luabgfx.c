@@ -1607,10 +1607,15 @@ lsetViewTransform(lua_State *L) {
 
 static int
 lsetVertexBuffer(lua_State *L) {
-	int stream = luaL_checkinteger(L, 1);
+	int stream = 0;
 	int hid = UINT16_MAX;
-	if (lua_isnumber(L, 2)) {
-		hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 2));
+	if (lua_gettop(L) == 1) {
+		hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 1));
+	} else {
+		stream = luaL_checkinteger(L, 1);
+		if (lua_isnumber(L, 2)) {
+			hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 2));
+		}
 	}
 	bgfx_vertex_buffer_handle_t handle = { hid };
 	int start = luaL_optinteger(L, 3, 0);
@@ -2068,14 +2073,26 @@ lsetUniform(lua_State *L) {
 }
 
 static uint32_t
-border_color(lua_State *L, char c) {
+border_color_or_compare(lua_State *L, char c) {
 	int n  = 0;
 	if (c>='0' && c<='9') {
 		n = c-'0';
 	} else if (c>='a' && c<='f') {
 		n = c-'a'+10;
 	} else {
-		luaL_error(L, "Invalid border color %c", c);
+		// compare
+		switch(c) {
+		case '<': return BGFX_TEXTURE_COMPARE_LESS;
+		case '[': return BGFX_TEXTURE_COMPARE_LEQUAL;
+		case '=': return BGFX_TEXTURE_COMPARE_EQUAL;
+		case ']': return BGFX_TEXTURE_COMPARE_GEQUAL;
+		case '>': return BGFX_TEXTURE_COMPARE_GREATER;
+		case '!': return BGFX_TEXTURE_COMPARE_NOTEQUAL;
+		case '-': return BGFX_TEXTURE_COMPARE_NEVER;
+		case '+': return BGFX_TEXTURE_COMPARE_ALWAYS;
+		default:
+			luaL_error(L, "Invalid border color %c", c);
+		}
 	}
 	return BGFX_TEXTURE_BORDER_COLOR(n);
 }
@@ -2094,7 +2111,7 @@ get_texture_flags(lua_State *L, const char *format) {
 		case '+': t = 0x40; break;	// MAG
 		case '*': t = 0x50; break;	// MIP
 		case 'c':
-			flags |= border_color(L, format[i+1]);
+			flags |= border_color_or_compare(L, format[i+1]);
 			continue;
 		case 'r':	// RT
 			switch(format[i+1]) {

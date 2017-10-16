@@ -38,7 +38,7 @@ local function mainloop()
 	end
 
 	ctx.idb:set()
-	bgfx.set_vertex_buffer(0, ctx.vb)
+	bgfx.set_vertex_buffer(ctx.vb)
 	bgfx.set_index_buffer(ctx.ib)
 	bgfx.set_state()
 	bgfx.submit(0, ctx.prog)

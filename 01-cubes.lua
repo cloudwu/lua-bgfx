@@ -25,7 +25,7 @@ local function mainloop()
 		for xx = 0, 10 do
 			mat:rotmat(time + xx*0.21, time + yy*0.37):trans(-15.0 + xx * 3, -15.0 + yy * 3, 0)
 			bgfx.set_transform(mat)
-			bgfx.set_vertex_buffer(0, ctx.vb)
+			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
 			bgfx.set_state(ctx.state)
 			bgfx.submit(0, ctx.prog)
