@@ -1771,8 +1771,7 @@ lsetTB(lua_State *L) {
 		v->cap_i = 0;
 	}
 	if (v->cap_v) {
-		int stream = luaL_optinteger(L, 2, 0);
-		bgfx_set_transient_vertex_buffer(stream, &v->tvb, 0, v->cap_v);
+		bgfx_set_transient_vertex_buffer(0, &v->tvb, 0, v->cap_v);
 		v->cap_v = 0;
 	}
 	return 0;
