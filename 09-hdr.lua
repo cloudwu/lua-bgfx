@@ -108,7 +108,7 @@ local function screenSpaceQuad(textureWidth, textureHeight, originBottomLeft)
 	ctx.tvb(1, maxx, miny, zz, 0xffffffff, maxu, minv)
 	ctx.tvb(2, maxx, maxy, zz, 0xffffffff, maxu, maxv)
 
-	ctx.tvb:set(0)
+	ctx.tvb:set()
 end
 
 local offsets = {}

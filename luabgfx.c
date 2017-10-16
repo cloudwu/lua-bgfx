@@ -1609,17 +1609,21 @@ static int
 lsetVertexBuffer(lua_State *L) {
 	int stream = 0;
 	int hid = UINT16_MAX;
+	int start = 0;
+	int end = UINT32_MAX;
 	if (lua_gettop(L) == 1) {
-		hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 1));
+		if (!lua_isnil(L, 1)) {
+			hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, luaL_checkinteger(L, 1));
+		}
 	} else {
 		stream = luaL_checkinteger(L, 1);
 		if (lua_isnumber(L, 2)) {
 			hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 2));
 		}
+		start = luaL_optinteger(L, 3, 0);
+		end = luaL_optinteger(L, 4, UINT32_MAX);
 	}
 	bgfx_vertex_buffer_handle_t handle = { hid };
-	int start = luaL_optinteger(L, 3, 0);
-	uint32_t end = luaL_optinteger(L, 4, UINT32_MAX); 
 	bgfx_set_vertex_buffer(stream, handle, start, end);
 	return 0;
 }
@@ -1767,7 +1771,8 @@ lsetTB(lua_State *L) {
 		v->cap_i = 0;
 	}
 	if (v->cap_v) {
-		bgfx_set_transient_vertex_buffer(0, &v->tvb, 0, v->cap_v);
+		int stream = luaL_optinteger(L, 2, 0);
+		bgfx_set_transient_vertex_buffer(stream, &v->tvb, 0, v->cap_v);
 		v->cap_v = 0;
 	}
 	return 0;
