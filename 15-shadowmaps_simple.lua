@@ -8,7 +8,7 @@ canvas = iup.canvas {}
 
 dlg = iup.dialog {
   canvas,
-  title = "14-shadowmaps_simple",
+  title = "15-shadowmaps_simple",
   size = "HALFxHALF",
 }
 
