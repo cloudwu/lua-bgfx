@@ -13,11 +13,11 @@ local settings = {
 local function slider(name, title, min, max)
 	local value = assert(settings[name])
 	local label = iup.label { title = tostring(value) }
-	local function update_value(self, v)
+	local function update_value(self)
+		local v = tonumber(self.value)
 		settings[name] = v
 		label.title = string.format("%.2f",v)
 	end
-
 	local s = iup.frame {
 		iup.hbox {
 			iup.val {
@@ -25,7 +25,7 @@ local function slider(name, title, min, max)
 				min = min,
 				max = max,
 				value = value,
-				mousemove_cb = update_value,
+				valuechanged_cb = update_value,
 			},
 			label
 		},

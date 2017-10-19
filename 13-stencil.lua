@@ -30,7 +30,8 @@ local ctrls = {}
 local function slider(name, title, min, max)
 	local value = assert(settings[name])
 	local label = iup.label { title = tostring(value) }
-	local function update_value(self, v)
+	local function update_value(self)
+		local v = tonumber(self.value)
 		settings[name] = v
 		label.title = string.format("%.2f",v)
 	end
@@ -40,7 +41,7 @@ local function slider(name, title, min, max)
 		min = min,
 		max = max,
 		value = value,
-		mousemove_cb = update_value,
+		valuechanged_cb = update_value,
 	}
 
 	local s = iup.vbox {
@@ -185,7 +186,7 @@ local s_renderStates = {
 			TEST = "ALWAYS",
 			FUNC_REF = 1,
 			FUNC_RMASK = 0xff,
-			OP_FAIL_Z = "REPLACE",
+			OP_FAIL_S = "REPLACE",
 			OP_FAIL_Z = "REPLACE",
 			OP_PASS_Z = "REPLACE",
 		},
@@ -204,7 +205,7 @@ local s_renderStates = {
 			TEST = "EQUAL",
 			FUNC_REF = 1,
 			FUNC_RMASK = 1,
-			OP_FAIL_Z = "KEEP",
+			OP_FAIL_S = "KEEP",
 			OP_FAIL_Z = "KEEP",
 			OP_PASS_Z = "KEEP",
 		},
@@ -812,8 +813,8 @@ function canvas:resize_cb(w,h)
 
 	local viewmat = math3d.matrix "view"
 	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 20, 40, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	viewmat:lookatp( 0.0, 60, -105, 0,0,0)
+	projmat:projmat(60, ctx.width/ctx.height, 0.1, 2000)
 end
 
 function canvas:action(x,y)

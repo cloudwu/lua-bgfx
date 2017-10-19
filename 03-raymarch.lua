@@ -46,7 +46,7 @@ local function mainloop()
 	local vp = math3d.matrix():mul(viewmat, projmat)
 	local mtx = math3d.matrix():rotmat(time, time * 0.37)
 	local mtxInv = math3d.matrix():inverted(mtx)
-	local lightDirTime = math3d.vector():pack(-0.4, -0.5, -1.0, 0):normalize():mul(mtxInv):pack(nil,nil,nil,time)
+	local lightDirTime = math3d.vector():pack(-0.4, -0.5, -1.0, 0):normalize():vec4mul(mtxInv):pack(nil,nil,nil,time)
 
 	bgfx.set_uniform(ctx.u_lightDirTime, lightDirTime)
 	local invMvp = math3d.matrix():mul(mtx,vp):inverted()

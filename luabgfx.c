@@ -2070,6 +2070,8 @@ lsetUniform(lua_State *L) {
 		bgfx_set_uniform(uh, &v, 1);
 	} else {
 		void *data = lua_touserdata(L, 2);
+		if (data == NULL)
+			return luaL_error(L, "Uniform can't be NULL");
 		bgfx_set_uniform(uh, data, 1);
 	}
 

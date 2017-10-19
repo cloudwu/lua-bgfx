@@ -192,9 +192,34 @@ lvec3_rotaxis(lua_State *L) {
 
 static int
 lvec3_mul(lua_State *L) {
-	struct vector3 *v = check_userdata(L,1);
-	union matrix44 *m = check_userdata(L,2);
-	vector3_mul(v,m);
+	if (lua_gettop(L) == 2) {
+		struct vector3 *v = check_userdata(L,1);
+		union matrix44 *m = check_userdata(L,2);
+		vector3_mul(v,m);
+	} else {
+		struct vector3 *r = check_userdata(L,1);
+		struct vector3 *v = check_userdata(L,2);
+		union matrix44 *m = check_userdata(L,3);
+		*r = *v;
+		vector3_mul(r,m);
+	}
+	lua_settop(L,1);
+	return 1;
+}
+
+static int
+lvec3_mulH(lua_State *L) {
+	if (lua_gettop(L) == 2) {
+		struct vector3 *v = check_userdata(L,1);
+		union matrix44 *m = check_userdata(L,2);
+		vector3_mulH(v,m);
+	} else {
+		struct vector3 *r = check_userdata(L,1);
+		struct vector3 *v = check_userdata(L,2);
+		union matrix44 *m = check_userdata(L,3);
+		*r = *v;
+		vector3_mulH(r,m);
+	}
 	lua_settop(L,1);
 	return 1;
 }
@@ -246,6 +271,7 @@ vector3(lua_State *L) {
 		{ "rotmat", lvec3_rotmat },
 		{ "rotaxis", lvec3_rotaxis },
 		{ "mul", lvec3_mul },
+		{ "mulH", lvec3_mulH },
 		{ "mul33", lvec3_mul33 },
 		{ "plane", lvec3_plane },
 		{ "distAABB", lvec3_distAABB },
@@ -518,10 +544,12 @@ static int
 lmat_mul(lua_State *L) {
 	union matrix44 *m = check_userdata(L, 1);
 	union matrix44 *a = check_userdata(L, 2);
-	union matrix44 *b = check_userdata(L, 3);
-	if (b == NULL) {
+	union matrix44 *b;
+	if (lua_gettop(L) ==2) {
 		b = a;
 		a = m;
+	} else {
+		b = check_userdata(L, 3);
 	}
 	matrix44_mul(m,a,b);
 	lua_settop(L,1);
@@ -695,9 +723,17 @@ lnewvec4(lua_State *L) {
 
 static int
 lvec4_mul(lua_State *L) {
-	struct vector4 *v = check_userdata(L,1);
-	union matrix44 *m = check_userdata(L,2);
-	vector4_mul(v,m);
+	if (lua_gettop(L) == 2) {
+		struct vector4 *v = check_userdata(L,1);
+		union matrix44 *m = check_userdata(L,2);
+		vector4_mul(v,m);
+	} else {
+		struct vector4 *r = check_userdata(L,1);
+		struct vector4 *v = check_userdata(L,2);
+		union matrix44 *m = check_userdata(L,3);
+		*r = *v;
+		vector4_mul(r,m);
+	}
 	lua_settop(L,1);
 	return 1;
 }

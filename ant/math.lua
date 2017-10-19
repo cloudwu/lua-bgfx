@@ -50,10 +50,10 @@ end
 
 local mat = {}
 
-function mat:projmat(fov, aspect, near, far)
+function mat:projmat(fov, aspect, near, far, h)
 	local ymax = near * math.tan(fov * math.pi / 360)
 	local xmax = ymax * aspect
-	return self:perspective(-xmax, xmax, -ymax, ymax, near, far, ant.caps.homogeneousDepth)
+	return self:perspective(-xmax, xmax, -ymax, ymax, near, far, h == nil and ant.caps.homogeneousDepth or h)
 end
 
 function mat:orthomat(l,r,t,b,n,f)
@@ -79,6 +79,11 @@ function mat:scalemat(x,y,z)
 	return self
 end
 
+function mat:transmat(x,y,z)
+	v:pack(x,y,z):transmat(self)
+	return self
+end
+
 function mat:srt(sx,sy,sz,rx,ry,rz,tx,ty,tz)
 	v:pack(sx,sy,sz):scalemat(self)
 	return self:rot(rx,ry,rz):trans(tx,ty,tz)
@@ -91,6 +96,7 @@ local vec = {
 	"cross",
 	"length",
 	"mul",
+	"mulH",
 }
 
 local function init()
@@ -100,6 +106,7 @@ local function init()
 	end
 	local vec3_meta = debug.getmetatable(math3d.vector3()).__index
 	local vec4_meta = debug.getmetatable(math3d.vector4()).__index
+	vec4_meta.vec4mul = vec4_meta.mul
 	for _,name in ipairs(vec) do
 		local method = assert(vec3_meta[name])
 		vec4_meta[name] = method
