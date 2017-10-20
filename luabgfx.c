@@ -733,6 +733,11 @@ ldestroy(lua_State *L) {
 		bgfx_destroy_frame_buffer(handle);
 		break;
 	}
+	case BGFX_HANDLE_OCCLUSION_QUERY: {
+		bgfx_occlusion_query_handle_t handle = { id };
+		bgfx_destroy_occlusion_query(handle);
+		break;
+	}
 	default:
 		return luaL_error(L, "Invalid handle (id=%x)", idx);
 	}
@@ -2833,6 +2838,63 @@ lsetScissor(lua_State *L) {
 	return 0;
 }
 
+static int
+lcreateOcclusionQuery(lua_State *L) {
+	bgfx_occlusion_query_handle_t h = bgfx_create_occlusion_query();
+	if (invalid_handle(h)) {
+		return luaL_error(L, "create occlusion query failed");
+	}
+	lua_pushinteger(L, BGFX_LUAHANDLE(OCCLUSION_QUERY, h));
+	return 1;
+}
+
+static int
+lsetCondition(lua_State *L) {
+	int oqid = BGFX_LUAHANDLE_ID(OCCLUSION_QUERY, luaL_checkinteger(L, 1));
+	luaL_checktype(L, 2, LUA_TBOOLEAN);
+	int visible = lua_toboolean(L, 2);
+	bgfx_occlusion_query_handle_t handle = { oqid };
+	bgfx_set_condition(handle, visible);
+	return 0;
+}
+
+static int
+lsubmitOcclusionQuery(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	int progid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
+	int oqid = BGFX_LUAHANDLE_ID(OCCLUSION_QUERY, luaL_checkinteger(L, 3));
+	int depth = luaL_optinteger(L, 4, 0);
+	int preserveState = lua_toboolean(L, 5);
+	bgfx_program_handle_t ph = { progid };
+	bgfx_occlusion_query_handle_t oqh = { oqid };
+	int drawcall = bgfx_submit_occlusion_query(id, ph, oqh, depth, preserveState);
+	lua_pushinteger(L, drawcall);
+	return 1;
+}
+
+static int
+lgetResult(lua_State *L) {
+	int oqid = BGFX_LUAHANDLE_ID(OCCLUSION_QUERY, luaL_checkinteger(L, 1));
+	int32_t num=0;
+	bgfx_occlusion_query_handle_t oqh = { oqid };
+	bgfx_occlusion_query_result_t r = bgfx_get_result(oqh, &num);
+	switch (r) {
+	case BGFX_OCCLUSION_QUERY_RESULT_INVISIBLE :
+		lua_pushboolean(L, 0);
+		break;
+	case BGFX_OCCLUSION_QUERY_RESULT_VISIBLE :
+		lua_pushboolean(L, 1);
+		break;
+	case BGFX_OCCLUSION_QUERY_RESULT_NORESULT:
+		lua_pushnil(L);
+		break;
+	default:
+		return luaL_error(L, "Invalid result %d", (int)r);
+	}
+	lua_pushinteger(L, num);
+	return 2;
+}
+
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
@@ -2895,6 +2957,10 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_stencil", lsetStencil },
 		{ "set_palette_color", lsetPaletteColor },
 		{ "set_scissor", lsetScissor },
+		{ "create_occlusion_query", lcreateOcclusionQuery },
+		{ "set_condition", lsetCondition },
+		{ "submit_occlusion_query", lsubmitOcclusionQuery },
+		{ "get_result", lgetResult },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
