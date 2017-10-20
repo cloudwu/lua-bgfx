@@ -61,9 +61,7 @@ local RED =4
 
 do
 
-canvas = iup.canvas {
-	rastersize = "1280x720",
-}
+canvas = iup.canvas {}
 
 local radios = {}
 local function radio(name)
@@ -715,7 +713,7 @@ dlg = iup.dialog {
 		margin = "2x2",
 	},
   title = "16-shadowmaps",
---  size = "HALF",
+  size = "HALF",
 }
 
 end

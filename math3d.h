@@ -492,18 +492,11 @@ vector3_mul(struct vector3 *v, const union matrix44 *m) {
 static inline struct vector3 *
 vector3_mulH(struct vector3 *v, const union matrix44 *m) {
 	float ww = v->x * C[0][3] + v->y * C[1][3] + v->z * C[2][3] + C[3][3];
-	if (ww == 0) {
-		v->x = 0;
-		v->y = 0;
-		v->z = 0;
-		return v;
-	}
+	ww = fabs(ww);
 	vector3_mul(v, m);
-	if (ww < 0) {
-		v->x = -v->x;
-		v->y = -v->y;
-		v->z = -v->z;
-	}
+	v->x /= ww;
+	v->y /= ww;
+	v->z /= ww;
 	return v;
 }
 

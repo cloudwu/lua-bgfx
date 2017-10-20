@@ -373,6 +373,31 @@ push_texture_formats(lua_State *L, const uint16_t *formats) {
 	}
 }
 
+static void
+push_limits(lua_State *L, const bgfx_caps_limits_t *lim) {
+	lua_createtable(L, 0, 18);
+#define PUSH_LIMIT(what) lua_pushinteger(L, lim->what); lua_setfield(L, -2, #what);
+
+	PUSH_LIMIT(maxDrawCalls)
+	PUSH_LIMIT(maxBlits)
+	PUSH_LIMIT(maxTextureSize)
+	PUSH_LIMIT(maxViews)
+	PUSH_LIMIT(maxFrameBuffers)
+	PUSH_LIMIT(maxFBAttachments)
+	PUSH_LIMIT(maxPrograms)
+	PUSH_LIMIT(maxShaders)
+	PUSH_LIMIT(maxTextures)
+	PUSH_LIMIT(maxTextureSamplers)
+	PUSH_LIMIT(maxVertexDecls)
+	PUSH_LIMIT(maxVertexStreams)
+	PUSH_LIMIT(maxIndexBuffers)
+	PUSH_LIMIT(maxVertexBuffers)
+	PUSH_LIMIT(maxDynamicIndexBuffers)
+	PUSH_LIMIT(maxDynamicVertexBuffers)
+	PUSH_LIMIT(maxUniforms)
+	PUSH_LIMIT(maxOcclusionQueries)
+}
+
 static int
 lgetCaps(lua_State *L) {
 	const bgfx_caps_t * caps = bgfx_get_caps();
@@ -402,6 +427,8 @@ lgetCaps(lua_State *L) {
 	lua_setfield(L, -2, "gpu");
 	push_texture_formats(L, caps->formats);
 	lua_setfield(L, -2, "formats");
+	push_limits(L, &caps->limits);
+	lua_setfield(L, -2, "limits");
 	return 1;
 }
 
@@ -554,12 +581,7 @@ lshutdown(lua_State *L) {
  */
 
 static int
-lsetViewClear(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
-	const char * flags = luaL_checkstring(L, 2);
-	uint32_t rgba = luaL_optinteger(L, 3, 0x000000ff);
-	float depth = luaL_optnumber(L, 4, 1.0f);
-	int stencil = luaL_optinteger(L, 5, 0);
+clear_flags(lua_State *L, const char *flags) {
 	int flag = BGFX_CLEAR_NONE;
 	int i;
 	for (i=0;flags[i];i++) {
@@ -582,7 +604,37 @@ lsetViewClear(lua_State *L) {
 			return luaL_error(L, "Invalid clear flag %c", flags[i]);
 		}
 	}
+	return flag;
+}
+
+static int
+lsetViewClear(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	const char * flags = luaL_checkstring(L, 2);
+	uint32_t rgba = luaL_optinteger(L, 3, 0x000000ff);
+	float depth = luaL_optnumber(L, 4, 1.0f);
+	int stencil = luaL_optinteger(L, 5, 0);
+	int flag = clear_flags(L, flags);
 	bgfx_set_view_clear(id, flag, rgba, depth, stencil);
+	return 0;
+}
+
+static int
+lsetViewClearMRT(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	const char * flags = luaL_checkstring(L, 2);
+	int flag = clear_flags(L, flags);
+	float depth = luaL_checknumber(L, 3);
+	int stencil = luaL_checkinteger(L, 4);
+	uint8_t c[8];
+	memset(c, UINT8_MAX, 8);
+	int n = lua_gettop(L) - 4;
+	int i;
+	for (i=0;i<n;i++) {
+		c[i] = (uint8_t)luaL_checkinteger(L, 5+i);
+	}
+	bgfx_set_view_clear_mrt(id, flag, depth, stencil,
+		c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
 	return 0;
 }
 
@@ -1591,7 +1643,7 @@ lsetViewTransform(lua_State *L) {
 	}
 	void *projL = lua_touserdata(L, 3);
 	if (projL == NULL) {
-		return luaL_error(L, "Need proj matrix");
+		luaL_checktype(L, 3, LUA_TNIL);
 	}
 	if (lua_isboolean(L, 4)) {
 		int stero = lua_toboolean(L, 4);
@@ -2741,6 +2793,46 @@ lsetStencil(lua_State *L) {
 	return 0;
 }
 
+static int
+lsetPaletteColor(lua_State *L) {
+	int index = luaL_checkinteger(L, 1);
+	int n = lua_gettop(L);
+	float c[4];
+	if (n == 2) {
+		// integer
+		uint32_t rgba = (uint32_t)luaL_checkinteger(L, 2);
+		int i;
+		for (i=3;i>=0;i--) {
+			uint8_t v = rgba & 0xff;
+			rgba >>= 8;
+			c[i] = (float)v / 255.0f;
+		}
+	} else if (n == 5) {
+		// r g b a
+		int i;
+		for (i=0;i<4;i++) {
+			c[i] = luaL_checknumber(L, 2+i);
+			if (c[i]<0 || c[i]>1) {
+				return luaL_error(L, "Color %f should be in [0,1]", c[i]);
+			}
+		}
+	} else {
+		return luaL_error(L, "set_palette_color need 4 float color or 1 uint32");
+	}
+	bgfx_set_palette_color(index, c);
+	return 0;
+}
+
+static int
+lsetScissor(lua_State *L) {
+	int x = luaL_checkinteger(L, 1);
+	int y = luaL_checkinteger(L, 2);
+	int w = luaL_checkinteger(L, 3);
+	int h = luaL_checkinteger(L, 4);
+	bgfx_set_scissor(x,y,w,h);
+	return 0;
+}
+
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
@@ -2761,6 +2853,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "reset", lreset },
 		{ "shutdown", lshutdown },
 		{ "set_view_clear", lsetViewClear },
+		{ "set_view_clear_mrt", lsetViewClearMRT },
 		{ "set_view_rect", lsetViewRect },
 		{ "set_view_transform", lsetViewTransform },
 		{ "set_view_order", lsetViewOrder },
@@ -2800,6 +2893,8 @@ luaopen_bgfx(lua_State *L) {
 		{ "blit", lblit },
 		{ "make_stencil", lmakeStencil },
 		{ "set_stencil", lsetStencil },
+		{ "set_palette_color", lsetPaletteColor },
+		{ "set_scissor", lsetScissor },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
