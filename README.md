@@ -1,3 +1,15 @@
+Yet another bgfx lua binding library
+=============
+
+This is my style bgfx lua (5.3) binding library (work on process), and I rewrote parts of bgfx original examples in lua.
+
+The lua version examples are not efficent but only for testing. 
+
+To build the library, you should build bgfx static library first, or you can download my [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases) .
+
+I use [IUP](http://webserver2.tecgraf.puc-rio.br/iup/) for GUI framework, you can also download the [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) .
+
+
 bgfx Lua 封装
 =============
 
@@ -24,4 +36,14 @@ iup 基于 https://github.com/cloudwu/iupmingw/ 编译，可以自己编译，�
 
 LICENSE
 =====
-和 bgfx 相同，采用 BSD 2-clause "Simplified" License
+
+The MIT License
+=====
+
+Copyright 2017 云风 cloudwu@gmail.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
