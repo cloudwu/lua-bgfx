@@ -375,17 +375,44 @@ lquat_matrix(lua_State *L) {
 static int
 lquat_pack(lua_State *L) {
 	struct quaternion *q = check_userdata(L,1);
-	if (!lua_isnoneornil(L, 2)) {
-		q->x = luaL_checknumber(L, 2);
-	}
-	if (!lua_isnoneornil(L, 3)) {
-		q->y = luaL_checknumber(L, 3);
-	}
-	if (!lua_isnoneornil(L, 4)) {
-		q->z = luaL_checknumber(L, 4);
-	}
-	if (!lua_isnoneornil(L, 5)) {
-		q->w = luaL_checknumber(L, 5);
+	if (lua_type(L, 2) == LUA_TSTRING) {
+		const char *fmt = lua_tostring(L, 2);
+		float *v = (float *)q;
+		int i;
+		int idx = 3;
+		for (i=0;i<4 && fmt[i];i++) {
+			switch(fmt[i]) {
+			case 'f':
+				v[i] = luaL_checknumber(L, idx+i);
+				break;
+			case 'd': {
+				union {
+					float f;
+					unsigned int d;
+				} u;
+				u.d = luaL_checkinteger(L, idx+i);
+				v[i] = u.f;
+				break;
+			}
+			case 'n':
+				break;
+			default:
+				return luaL_error(L, "Invalid pack %c", fmt[i]);
+			}
+		}
+	} else {
+		if (!lua_isnoneornil(L, 2)) {
+			q->x = luaL_checknumber(L, 2);
+		}
+		if (!lua_isnoneornil(L, 3)) {
+			q->y = luaL_checknumber(L, 3);
+		}
+		if (!lua_isnoneornil(L, 4)) {
+			q->z = luaL_checknumber(L, 4);
+		}
+		if (!lua_isnoneornil(L, 5)) {
+			q->w = luaL_checknumber(L, 5);
+		}
 	}
 	lua_settop(L,1);
 	return 1;

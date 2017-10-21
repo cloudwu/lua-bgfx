@@ -38,6 +38,11 @@ do
 		local fsid = fs and load_shader(fs)
 		return bgfx.create_program(vsid, fsid, true)
 	end
+
+	function util.computeLoad(cs)
+		local csid = load_shader(cs)
+		return bgfx.create_program(csid, true)
+	end
 end
 
 do

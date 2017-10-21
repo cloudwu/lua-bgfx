@@ -713,9 +713,20 @@ ldestroy(lua_State *L) {
 		bgfx_destroy_vertex_buffer(handle);
 		break;
 	}
+	case BGFX_HANDLE_DYNAMIC_VERTEX_BUFFER: {
+		bgfx_dynamic_vertex_buffer_handle_t handle = { id };
+		bgfx_destroy_dynamic_vertex_buffer(handle);
+		break;
+	}
 	case BGFX_HANDLE_INDEX_BUFFER: {
 		bgfx_index_buffer_handle_t handle = { id };
 		bgfx_destroy_index_buffer(handle);
+		break;
+	}
+	case BGFX_HANDLE_DYNAMIC_INDEX_BUFFER_32:
+	case BGFX_HANDLE_DYNAMIC_INDEX_BUFFER : {
+		bgfx_dynamic_index_buffer_handle_t handle = { id };
+		bgfx_destroy_dynamic_index_buffer(handle);
 		break;
 	}
 	case BGFX_HANDLE_UNIFORM : {
@@ -738,6 +749,11 @@ ldestroy(lua_State *L) {
 		bgfx_destroy_occlusion_query(handle);
 		break;
 	}
+	case BGFX_HANDLE_INDIRECT_BUFFER: {
+		bgfx_indirect_buffer_handle_t handle = { id };
+		bgfx_destroy_indirect_buffer(handle);
+		break;
+	}
 	default:
 		return luaL_error(L, "Invalid handle (id=%x)", idx);
 	}
@@ -748,13 +764,33 @@ static int
 lcreateProgram(lua_State *L) {
 	int vs = BGFX_LUAHANDLE_ID(SHADER, luaL_checkinteger(L, 1));
 	int fs = UINT16_MAX;
-	if (lua_isnumber(L, 2)) {
+	int t = lua_type(L, 2);
+	int d = 0;
+	int compute = 0;
+	switch (t) {
+	case LUA_TNUMBER:
 		fs = BGFX_LUAHANDLE_ID(SHADER, luaL_checkinteger(L, 2));
+		break;
+	case LUA_TBOOLEAN:
+		d = lua_toboolean(L, 2);
+		compute = 1;
+		break;
+	case LUA_TNONE:
+		compute = 1;
+		break;
+	case LUA_TNIL:
+		d = lua_toboolean(L, 3);
+		break;
+	};
+	bgfx_program_handle_t ph;
+	if (compute) {
+		bgfx_shader_handle_t csh = { vs };
+		ph = bgfx_create_compute_program(csh, d);
+	} else {
+		bgfx_shader_handle_t vsh = { vs };
+		bgfx_shader_handle_t fsh = { fs };
+		ph = bgfx_create_program(vsh, fsh, d);
 	}
-	int d = lua_toboolean(L, 3);
-	bgfx_shader_handle_t vsh = { vs };
-	bgfx_shader_handle_t fsh = { fs };
-	bgfx_program_handle_t ph = bgfx_create_program(vsh, fsh, d);
 	if (invalid_handle(ph)) {
 		return luaL_error(L, "create program failed");
 	}
@@ -1583,24 +1619,154 @@ lcreateVertexBuffer(lua_State *L) {
 	return 1;
 }
 
+static int
+lupdateDynamicVertexBuffer(lua_State *L) {
+	int hid = BGFX_LUAHANDLE_ID(DYNAMIC_VERTEX_BUFFER, luaL_checkinteger(L, 1));
+	uint32_t start = luaL_checkinteger(L, 2);
+	const bgfx_memory_t *mem = create_from_table_decl(L, 3);
+	bgfx_dynamic_vertex_buffer_handle_t handle = { hid };
+	bgfx_update_dynamic_vertex_buffer(handle, start, mem);
+}
+
+static int
+lcreateDynamicVertexBuffer(lua_State *L) {
+	bgfx_vertex_decl_t *vd = lua_touserdata(L, 2);
+	if (vd == NULL)
+		return luaL_error(L, "Invalid vertex decl");
+	uint16_t flags = BGFX_BUFFER_NONE;
+	if (lua_isstring(L, 3)) {
+		const char *f = lua_tostring(L, 3);
+		int i;
+		for (i=0;f[i];i++) {
+			switch(f[i]) {
+			case 'r' :
+				flags |= BGFX_BUFFER_COMPUTE_READ;
+				break;
+			case 'w':
+				flags |= BGFX_BUFFER_COMPUTE_WRITE;
+				break;
+			case 'a':
+				flags |= BGFX_BUFFER_ALLOW_RESIZE;
+				break;
+			default:
+				return luaL_error(L, "Invalid buffer flag %c", f[i]);
+			}
+		}
+	}
+
+	bgfx_dynamic_vertex_buffer_handle_t handle;
+	if (lua_type(L, 1) == LUA_TNUMBER) {
+		uint32_t num = luaL_checkinteger(L, 1);
+		handle = bgfx_create_dynamic_vertex_buffer(num, vd, flags);
+	} else {
+		const bgfx_memory_t *mem = create_from_table_decl(L, 1);
+		handle = bgfx_create_dynamic_vertex_buffer_mem(mem, vd, flags);
+	}
+
+	if (invalid_handle(handle)) {
+		return luaL_error(L, "create dynamic vertex buffer failed");
+	}
+
+	lua_pushinteger(L, BGFX_LUAHANDLE(DYNAMIC_VERTEX_BUFFER, handle));
+	return 1;
+}
+
+static uint16_t
+index_buffer_flags(lua_State *L, int index) {
+	uint16_t flags = BGFX_BUFFER_NONE;
+	if (lua_isstring(L, index)) {
+		const char *f = lua_tostring(L, index);
+		int i;
+		for (i=0;f[i];i++) {
+			switch(f[i]) {
+			case 'r' :
+				flags |= BGFX_BUFFER_COMPUTE_READ;
+				break;
+			case 'w':
+				flags |= BGFX_BUFFER_COMPUTE_WRITE;
+				break;
+			case 'a':
+				flags |= BGFX_BUFFER_ALLOW_RESIZE;
+				break;
+			case 'd':
+				flags |= BGFX_BUFFER_INDEX32;
+				break;
+			default:
+				return luaL_error(L, "Invalid buffer flag %c", f[i]);
+			}
+		}
+	}
+	return flags;
+}
+
 /*
 	table data / lightuserdata mem
 	boolean 32bit index
  */
 static int
 lcreateIndexBuffer(lua_State *L) {
-	int is32bit = lua_toboolean(L, 2);
 	const bgfx_memory_t *mem;
-	if (is32bit) {
+	uint16_t flags = index_buffer_flags(L, 2);
+	if (flags & BGFX_BUFFER_INDEX32) {
 		mem = create_from_table_int32(L, 1);
 	} else {
 		mem = create_from_table_int16(L, 1);
 	}
-	bgfx_index_buffer_handle_t handle = bgfx_create_index_buffer(mem, is32bit ? BGFX_BUFFER_INDEX32 : BGFX_BUFFER_NONE);
+	bgfx_index_buffer_handle_t handle = bgfx_create_index_buffer(mem, flags);
 	if (invalid_handle(handle)) {
 		return luaL_error(L, "create index buffer failed");
 	}
 	lua_pushinteger(L, BGFX_LUAHANDLE(INDEX_BUFFER, handle));
+	return 1;
+}
+
+static int
+lupdateDynamicIndexBuffer(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	int idtype = id >> 16;
+	int idx = id & 0xffff;
+	bgfx_dynamic_index_buffer_handle_t handle = { idx };
+	uint32_t start = luaL_checkinteger(L, 2);
+	const bgfx_memory_t *mem;
+	if (idtype == BGFX_HANDLE_DYNAMIC_INDEX_BUFFER) {
+		mem = create_from_table_int16(L, 3);
+	} else {
+		if (idtype != BGFX_HANDLE_DYNAMIC_INDEX_BUFFER_32) {
+			return luaL_error(L, "Invalid dynamic index buffer type %d", idtype);
+		}
+		mem = create_from_table_int32(L, 3);
+	}
+	bgfx_update_dynamic_index_buffer(handle, start, mem);
+	return 0;
+}
+
+static int
+lcreateDynamicIndexBuffer(lua_State *L) {
+	uint16_t flags = index_buffer_flags(L, 2);
+
+	bgfx_dynamic_index_buffer_handle_t handle;
+	if (lua_type(L, 1) == LUA_TNUMBER) {
+		uint32_t num = luaL_checkinteger(L, 1);
+		handle = bgfx_create_dynamic_index_buffer(num, flags);
+	} else {
+		const bgfx_memory_t *mem;
+		if (flags & BGFX_BUFFER_INDEX32) {
+			mem = create_from_table_int32(L, 1);
+		} else {
+			mem = create_from_table_int16(L, 1);
+		}
+		handle = bgfx_create_dynamic_index_buffer_mem(mem, flags);
+	}
+
+	if (invalid_handle(handle)) {
+		return luaL_error(L, "create dynamic index buffer failed");
+	}
+
+	if (flags & BGFX_BUFFER_INDEX32) {
+		lua_pushinteger(L, BGFX_LUAHANDLE(DYNAMIC_INDEX_BUFFER_32, handle));
+	} else {
+		lua_pushinteger(L, BGFX_LUAHANDLE(DYNAMIC_INDEX_BUFFER, handle));
+	}
 	return 1;
 }
 
@@ -1665,36 +1831,58 @@ lsetViewTransform(lua_State *L) {
 static int
 lsetVertexBuffer(lua_State *L) {
 	int stream = 0;
-	int hid = UINT16_MAX;
 	int start = 0;
 	int end = UINT32_MAX;
-	if (lua_gettop(L) == 1) {
-		if (!lua_isnil(L, 1)) {
-			hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, luaL_checkinteger(L, 1));
+	int id;
+	if (lua_gettop(L) <= 1) {
+		if (lua_isnoneornil(L, 1)) {
+			// empty
+			bgfx_vertex_buffer_handle_t handle = { UINT16_MAX };
+			bgfx_set_vertex_buffer(stream, handle, start, end);
+			return 0;
 		}
+		id = luaL_checkinteger(L, 1);
 	} else {
 		stream = luaL_checkinteger(L, 1);
-		if (lua_isnumber(L, 2)) {
-			hid = BGFX_LUAHANDLE_ID(VERTEX_BUFFER, lua_tointeger(L, 2));
-		}
+		id = luaL_optinteger(L, 2, BGFX_HANDLE_VERTEX_BUFFER | UINT16_MAX);
 		start = luaL_optinteger(L, 3, 0);
 		end = luaL_optinteger(L, 4, UINT32_MAX);
 	}
-	bgfx_vertex_buffer_handle_t handle = { hid };
-	bgfx_set_vertex_buffer(stream, handle, start, end);
+
+	int idtype = id >> 16;
+	int idx = id & 0xffff;
+	if (idtype == BGFX_HANDLE_VERTEX_BUFFER) {
+		bgfx_vertex_buffer_handle_t handle = { idx };
+		bgfx_set_vertex_buffer(stream, handle, 0, UINT32_MAX);
+	} else {
+		if (idtype != BGFX_HANDLE_DYNAMIC_VERTEX_BUFFER) {
+			return luaL_error(L, "Invalid vertex buffer type %d", idtype);
+		}
+		bgfx_dynamic_vertex_buffer_handle_t handle = { idx };
+		bgfx_set_dynamic_vertex_buffer(stream, handle, 0, UINT32_MAX);
+	}
 	return 0;
 }
 
 static int
 lsetIndexBuffer(lua_State *L) {
-	int hid = UINT16_MAX;
-	if (lua_isnumber(L, 1)) {
-		hid = BGFX_LUAHANDLE_ID(INDEX_BUFFER, lua_tointeger(L, 1));
-	}
-	bgfx_index_buffer_handle_t handle = { hid };
+	int id = luaL_optinteger(L, 1, BGFX_HANDLE_INDEX_BUFFER | UINT16_MAX);
+	int idtype = id >> 16;
+	int idx = id & 0xffff;
 	int start = luaL_optinteger(L, 2, 0);
 	uint32_t end = luaL_optinteger(L, 3, UINT32_MAX); 
-	bgfx_set_index_buffer(handle, start, end);
+
+	if (idtype == BGFX_HANDLE_INDEX_BUFFER) {
+		bgfx_index_buffer_handle_t handle = { idx };
+		bgfx_set_index_buffer(handle, start, end);
+	} else {
+		if (idtype != BGFX_HANDLE_DYNAMIC_INDEX_BUFFER &&
+			idtype != BGFX_HANDLE_DYNAMIC_INDEX_BUFFER_32) {
+			return luaL_error(L, "Invalid index buffer type %d", idtype);
+		}
+		bgfx_dynamic_index_buffer_handle_t handle = { idx };
+		bgfx_set_dynamic_index_buffer(handle, start, end);
+	}
 	return 0;
 }
 
@@ -2098,7 +2286,7 @@ lsetUniform(lua_State *L) {
 		default:
 			return luaL_error(L, "Invalid uniform type %d", info.type);
 		}
-		char buffer[sz * n];
+		uint8_t buffer[sz * n];
 		if (info.type == BGFX_UNIFORM_TYPE_INT1) {
 			int i;
 			int32_t * data = (int32_t *)buffer;
@@ -2873,6 +3061,23 @@ lsubmitOcclusionQuery(lua_State *L) {
 }
 
 static int
+lsubmitIndirect(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	int progid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
+	int iid = BGFX_LUAHANDLE_ID(INDIRECT_BUFFER, luaL_checkinteger(L, 3));
+	uint16_t start = luaL_optinteger(L, 4, 0);
+	uint16_t num = luaL_optinteger(L, 5, 1);
+	int32_t depth = luaL_optinteger(L, 6, 0);
+	bool preserveState = lua_toboolean(L, 7);
+	bgfx_program_handle_t ph = { progid };
+	bgfx_indirect_buffer_handle_t ih = { iid };
+
+	int drawcall = bgfx_submit_indirect(id, ph, ih, start, num, depth, preserveState);
+	lua_pushinteger(L, drawcall);
+	return 1;
+}
+
+static int
 lgetResult(lua_State *L) {
 	int oqid = BGFX_LUAHANDLE_ID(OCCLUSION_QUERY, luaL_checkinteger(L, 1));
 	int32_t num=0;
@@ -2893,6 +3098,178 @@ lgetResult(lua_State *L) {
 	}
 	lua_pushinteger(L, num);
 	return 2;
+}
+
+static int
+lcreateIndirectBuffer(lua_State *L) {
+	int num = luaL_checkinteger(L, 1);
+	bgfx_indirect_buffer_handle_t h = bgfx_create_indirect_buffer(num);
+	if (invalid_handle(h)) {
+		return luaL_error(L, "create occlusion query failed");
+	}
+	lua_pushinteger(L, BGFX_LUAHANDLE(INDIRECT_BUFFER, h));
+	return 1;
+}
+
+static int
+lsetBuffer(lua_State *L) {
+	int stage = luaL_checkinteger(L, 1);
+	int idx = luaL_checkinteger(L, 2);
+	int type = idx >> 16;
+	int id = idx & 0xffff;
+	const char * access = luaL_checkstring(L, 3);
+	bgfx_access_t a;
+	if (access[0] == 'r') {
+		a = BGFX_ACCESS_READ;
+	} else if (access[0] == 'w') {
+		a = BGFX_ACCESS_WRITE;
+	} else {
+		return luaL_error(L, "Invalid buffer access %s", access);
+	}
+	if (access[1] != 0) {
+		if ((a == BGFX_ACCESS_READ && access[1] == 'w') || (a == BGFX_ACCESS_WRITE && access[1] == 'r'))
+			a = BGFX_ACCESS_READWRITE;
+		else
+			return luaL_error(L, "Invalid buffer access %s", access);
+	}
+	switch(type) {
+	case BGFX_HANDLE_VERTEX_BUFFER: {
+		bgfx_vertex_buffer_handle_t handle = { id };
+		bgfx_set_compute_vertex_buffer(stage, handle, a);
+		break;
+	}
+	case BGFX_HANDLE_DYNAMIC_VERTEX_BUFFER: {
+		bgfx_dynamic_vertex_buffer_handle_t handle = { id };
+		bgfx_set_compute_dynamic_vertex_buffer(stage, handle, a);
+		break;
+	}
+	case BGFX_HANDLE_INDEX_BUFFER: {
+		bgfx_index_buffer_handle_t handle = { id };
+		bgfx_set_compute_index_buffer(stage, handle, a);
+		break;
+	}
+	case BGFX_HANDLE_DYNAMIC_INDEX_BUFFER_32:
+	case BGFX_HANDLE_DYNAMIC_INDEX_BUFFER: {
+		bgfx_dynamic_index_buffer_handle_t handle = { id };
+		bgfx_set_compute_dynamic_index_buffer(stage, handle, a);
+		break;
+	}
+	case BGFX_HANDLE_INDIRECT_BUFFER: {
+		bgfx_indirect_buffer_handle_t handle = { id };
+		bgfx_set_compute_indirect_buffer(stage, handle, a);
+		break;
+	}
+	default:
+		return luaL_error(L, "Invalid buffer type %d", type);
+	}
+	return 0;
+}
+
+static int
+lsetInstanceDataBuffer(lua_State *L) {
+	int idx = luaL_checkinteger(L, 1);
+	int type = idx >> 16;
+	int id = idx & 0xffff;
+	uint32_t start = luaL_checkinteger(L, 2);
+	uint32_t num = luaL_checkinteger(L, 3);
+	switch(type) {
+	case BGFX_HANDLE_VERTEX_BUFFER: {
+		bgfx_vertex_buffer_handle_t handle = { id };
+		bgfx_set_instance_data_from_vertex_buffer(handle, start, num);
+		break;
+	}
+	case BGFX_HANDLE_DYNAMIC_VERTEX_BUFFER: {
+		bgfx_dynamic_vertex_buffer_handle_t handle = { id };
+		bgfx_set_instance_data_from_dynamic_vertex_buffer(handle, start, num);
+		break;
+	}
+	default:
+		return luaL_error(L, "Invalid set instance data buffer %d", type);
+	}
+	return 0;
+}
+
+static uint8_t
+dispatch_flags(lua_State *L, int index) {
+	const char * f = lua_tostring(L, index);
+	uint8_t flags;
+	int i;
+	for (i=0;f[i];i++) {
+		switch(f[i]) {
+		case 'l':
+			flags |= BGFX_SUBMIT_EYE_LEFT;
+			break;
+		case 'r':
+			flags |= BGFX_SUBMIT_EYE_RIGHT;
+			break;
+		default:
+			luaL_error(L, "Invalid dispatch flags %s", f);
+			return 0;
+		}
+	}
+	return flags;
+}
+
+static uint8_t
+dispatch_opt(lua_State *L, int *num, int n, int index) {
+	int top = lua_gettop(L);
+	int i;
+	uint8_t flags = BGFX_SUBMIT_EYE_FIRST;
+	for (i=index;i<=top;i++) {
+		int t = lua_type(L, i);
+		int idx = i - index;
+		switch(t) {
+		case LUA_TNUMBER:
+			if (idx >= n) {
+				luaL_error(L, "Too many parm for dispatch");
+				return 0;
+			}
+			num[i-index] = lua_tointeger(L, i);
+			break;
+		case LUA_TSTRING:
+			if (i != top) {
+				luaL_error(L, "flags should be last");
+				return 0;
+			}
+			flags = dispatch_flags(L, i);
+			break;
+		default:
+			luaL_error(L, "Invalid param type %s at %d", lua_typename(L, i), i);
+			return 0;
+		}
+	}
+	return flags;
+}
+
+static int
+ldispatch(lua_State *L) {
+	int viewid = luaL_checkinteger(L, 1);
+	int pid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
+	int num[3] = {1,1,1};
+	uint8_t flags = dispatch_opt(L, num, 3, 3);
+
+	bgfx_program_handle_t  handle = { pid };
+
+	uint32_t dc = bgfx_dispatch(viewid, handle, num[0], num[1], num[2], flags); 
+	lua_pushinteger(L, dc);
+
+	return 1;
+}
+
+static int
+ldispatchIndirect(lua_State *L) {
+	int viewid = luaL_checkinteger(L, 1);
+	int pid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
+	int iid = BGFX_LUAHANDLE_ID(INDIRECT_BUFFER, luaL_checkinteger(L, 3));
+	int num[2] = { 0, 1 };
+	uint8_t flags = dispatch_opt(L, num, 2, 4);
+	bgfx_program_handle_t  phandle = { pid };
+	bgfx_indirect_buffer_handle_t  ihandle = { iid };
+
+	uint32_t dc = bgfx_dispatch_indirect(viewid, phandle, ihandle, num[0], num[1], flags); 
+	lua_pushinteger(L, dc);
+
+	return 1;
 }
 
 LUAMOD_API int
@@ -2931,7 +3308,9 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_state", lsetState },
 		{ "vertex_decl", lnewVertexDecl },
 		{ "create_vertex_buffer", lcreateVertexBuffer },
+		{ "create_dynamic_vertex_buffer", lcreateDynamicVertexBuffer },
 		{ "create_index_buffer", lcreateIndexBuffer },
+		{ "create_dynamic_index_buffer", lcreateDynamicIndexBuffer },
 		{ "create_index_buffer_compress", lcreateIndexBufferCompress },
 		{ "set_vertex_buffer", lsetVertexBuffer },
 		{ "set_index_buffer", lsetIndexBuffer },
@@ -2961,6 +3340,14 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_condition", lsetCondition },
 		{ "submit_occlusion_query", lsubmitOcclusionQuery },
 		{ "get_result", lgetResult },
+		{ "create_indirect_buffer", lcreateIndirectBuffer },
+		{ "set_buffer", lsetBuffer },
+		{ "dispatch", ldispatch },
+		{ "dispatch_indirect", ldispatchIndirect },
+		{ "set_instance_data_buffer", lsetInstanceDataBuffer },
+		{ "submit_indirect", lsubmitIndirect },
+		{ "update_dynamic_vertex_buffer", lupdateDynamicVertexBuffer },
+		{ "update_dynamic_index_buffer", lupdateDynamicIndexBuffer },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
