@@ -3,7 +3,7 @@ Yet another bgfx lua binding library
 
 This is my style bgfx lua (5.3) binding library (work on process), and I rewrote parts of bgfx original examples in lua.
 
-The lua version examples are not efficent but only for testing. 
+The lua version examples are not efficent but just only for testing.
 
 To build the library, you should build bgfx static library first, or you can download my [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases) .
 

@@ -56,7 +56,7 @@ local function slider(name, title, min, max)
 			s.visible = v and "YES" or "NO"
 		else
 			c.value = v
-			update_value(nil,v)
+			update_value(c,v)
 		end
 	end
 	return s,setter
@@ -813,7 +813,7 @@ function canvas:resize_cb(w,h)
 
 	local viewmat = math3d.matrix "view"
 	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 60, -105, 0,0,0)
+	viewmat:lookatp( 0, 18, -40, 0,0,0)
 	projmat:projmat(60, ctx.width/ctx.height, 0.1, 2000)
 end
 
