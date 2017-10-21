@@ -9,6 +9,9 @@ To build the library, you should build bgfx static library first, or you can dow
 
 I use [IUP](http://webserver2.tecgraf.puc-rio.br/iup/) for GUI framework, you can also download the [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) .
 
+To test it, just put `iup.exe` , `math3d.dll` , `bgfx.dll` in the same directory with the asserts (textures/shaders/meshes) from bgfx , and run :
+
+> iup.exe 00-helloworld.lua
 
 bgfx Lua 封装
 =============
