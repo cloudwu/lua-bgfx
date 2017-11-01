@@ -1626,6 +1626,8 @@ lupdateDynamicVertexBuffer(lua_State *L) {
 	const bgfx_memory_t *mem = create_from_table_decl(L, 3);
 	bgfx_dynamic_vertex_buffer_handle_t handle = { hid };
 	bgfx_update_dynamic_vertex_buffer(handle, start, mem);
+
+	return 0;
 }
 
 static int
@@ -3192,7 +3194,7 @@ lsetInstanceDataBuffer(lua_State *L) {
 static uint8_t
 dispatch_flags(lua_State *L, int index) {
 	const char * f = lua_tostring(L, index);
-	uint8_t flags;
+	uint8_t flags = 0;
 	int i;
 	for (i=0;f[i];i++) {
 		switch(f[i]) {
