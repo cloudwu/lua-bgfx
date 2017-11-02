@@ -344,8 +344,9 @@ static inline union matrix44 *
 matrix44_perspective(union matrix44 *m, float l, float r, float b, float t, float n, float f, int homogeneousDepth) {
 	matrix44_identity(m);
 	float *mx = m->x;
-	const float aa = (homogeneousDepth ? (f + n) : f) / (f - n);
-	const float bb = homogeneousDepth ? 2.0f * f * n : n * aa;
+	const float diff = f - n;
+	const float aa = (homogeneousDepth ? (f + n) : f) / diff;
+	const float bb = homogeneousDepth ? 2.0f * f * n / diff : n * aa;
 
 	mx[0] = 2.0f * n / (r - l);
 	mx[5] = 2.0f * n / (t - b);
