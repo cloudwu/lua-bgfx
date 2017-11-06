@@ -2267,6 +2267,33 @@ lcreateUniform(lua_State *L) {
 }
 
 static int
+lgetUniformInfo(lua_State *L) {
+	int uniformid = BGFX_LUAHANDLE_ID(UNIFORM, luaL_checkinteger(L, 1));
+	bgfx_uniform_handle_t uh = { uniformid };
+	bgfx_uniform_info_t ut;
+	bgfx_get_uniform_info(uh, &ut);
+	lua_pushstring(L, ut.name);
+	switch (ut.type) {
+	case BGFX_UNIFORM_TYPE_INT1:
+		lua_pushstring(L, "i1");
+		break;
+	case BGFX_UNIFORM_TYPE_VEC4:
+		lua_pushstring(L, "v4");
+		break;
+	case BGFX_UNIFORM_TYPE_MAT3:
+		lua_pushstring(L, "m3");
+		break;
+	case BGFX_UNIFORM_TYPE_MAT4:
+		lua_pushstring(L, "m4");
+		break;
+	default:
+		return luaL_error(L, "Invalid uniform type %d", (int)ut.type);
+	}
+	lua_pushinteger(L, ut.num);
+	return 3;
+}
+
+static int
 lsetUniform(lua_State *L) {
 	int uniformid = BGFX_LUAHANDLE_ID(UNIFORM, luaL_checkinteger(L, 1));
 	bgfx_uniform_handle_t uh = { uniformid };
@@ -3274,6 +3301,23 @@ ldispatchIndirect(lua_State *L) {
 	return 1;
 }
 
+static int
+lgetShaderUniforms(lua_State *L) {
+	int sid = BGFX_LUAHANDLE_ID(SHADER, luaL_checkinteger(L, 1));
+	bgfx_shader_handle_t shader = { sid };
+	uint16_t n = bgfx_get_shader_uniforms(shader, NULL, 0);
+	lua_createtable(L, n, 0);
+	bgfx_uniform_handle_t u[n];
+	bgfx_get_shader_uniforms(shader, u, n);
+	int i;
+	for (i=0;i<n;i++) {
+		int id = BGFX_LUAHANDLE(UNIFORM, u[i]);
+		lua_pushinteger(L, id);
+		lua_rawseti(L, -2, i+1);
+	}
+	return 1;
+}
+
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
@@ -3323,6 +3367,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "dbg_text_image", ldbgTextImage },
 		{ "transient_buffer", lnewTransientBuffer },
 		{ "create_uniform", lcreateUniform },
+		{ "get_uniform_info", lgetUniformInfo },
 		{ "set_uniform", lsetUniform },
 		{ "instance_buffer", lnewInstanceBuffer },
 		{ "create_texture", lcreateTexture },	// create texture from data string (DDS, KTX or PVR texture data)
@@ -3350,6 +3395,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "submit_indirect", lsubmitIndirect },
 		{ "update_dynamic_vertex_buffer", lupdateDynamicVertexBuffer },
 		{ "update_dynamic_index_buffer", lupdateDynamicIndexBuffer },
+		{ "get_shader_uniforms", lgetShaderUniforms },
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);

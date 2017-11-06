@@ -23,7 +23,7 @@ static inline int
 check_handle_type(lua_State *L, int type, int id, const char * tname) {
 	int idtype = id >> 16;
 	if (idtype != type) {
-		return luaL_error(L, "Invalid handle type %s (id = %x)", tname, id);
+		return luaL_error(L, "Invalid handle type %s (id = %d:%d)", tname, idtype, id&0xffff);
 	}
 	return id & 0xffff;
 }
