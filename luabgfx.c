@@ -2630,6 +2630,14 @@ create_fb_mrt(lua_State *L) {
 	return bgfx_create_frame_buffer_from_handles(n, handles, destroy);
 }
 
+static bgfx_frame_buffer_handle_t
+create_fb_nwh(lua_State *L) {
+	void *nwh = lua_touserdata(L, 1);
+	int w = luaL_checkinteger(L, 2);
+	int h = luaL_checkinteger(L, 3);
+	return bgfx_create_frame_buffer_from_nwh(nwh, w, h, BGFX_TEXTURE_FORMAT_UNKNOWN_DEPTH);
+}
+
 /*
 	1.
 		integer width
@@ -2643,6 +2651,10 @@ create_fb_mrt(lua_State *L) {
 	3.
 		table textures[]
 		boolean destroyTex = false
+	4.
+		lightuserdata window_handle
+		integer width
+		integer height
 	todo:
 		from native window handle
 		from attachment
@@ -2660,6 +2672,9 @@ lcreateFrameBuffer(lua_State *L) {
 		break;
 	case LUA_TSTRING:
 		handle = create_fb_scaled(L);
+		break;
+	case LUA_TLIGHTUSERDATA:
+		handle = create_fb_nwh(L);
 		break;
 	default:
 		return luaL_error(L, "Invalid argument type %s for create_frame_buffer", lua_typename(L, t));
