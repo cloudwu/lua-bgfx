@@ -1298,7 +1298,24 @@ lnewVertexDecl(lua_State *L) {
 static const bgfx_memory_t *
 create_mem_from_table(lua_State *L, int idx, int n) {
 	// binary data
-	if (lua_geti(L, idx, n) != LUA_TSTRING) {
+	int t = lua_geti(L, idx, n);
+	if (t == LUA_TLIGHTUSERDATA || t == LUA_TUSERDATA) {
+		void * data = lua_touserdata(L, -1);
+		size_t sz;
+		if (lua_geti(L, idx, n+1) == LUA_TNUMBER) {
+			sz = lua_tointeger(L, -1);
+		} else if (t == LUA_TLIGHTUSERDATA) {
+			luaL_error(L, "Missing size for lightuserdata");
+			return NULL;
+		} else {
+			sz = lua_rawlen(L, -2);
+		}
+		lua_pop(L, 2);
+		const bgfx_memory_t *mem = bgfx_make_ref(data, sz);
+		return mem;
+	}
+
+	if (t != LUA_TSTRING) {
 		luaL_error(L, "Missing data string");
 	}
 	size_t sz = 0;
@@ -1417,7 +1434,7 @@ create_from_table_decl(lua_State *L, int idx) {
 static const bgfx_memory_t *
 create_from_table_int16(lua_State *L, int idx) {
 	luaL_checktype(L, idx, LUA_TTABLE);
-	if (lua_geti(L, idx, 1) == LUA_TSTRING) {
+	if (lua_geti(L, idx, 1) != LUA_TNUMBER) {
 		lua_pop(L, 1);
 		return create_mem_from_table(L, idx, 1);
 	}
@@ -1436,7 +1453,7 @@ create_from_table_int16(lua_State *L, int idx) {
 static const bgfx_memory_t *
 create_from_table_int32(lua_State *L, int idx) {
 	luaL_checktype(L, idx, LUA_TTABLE);
-	if (lua_geti(L, idx, 1) == LUA_TSTRING) {
+	if (lua_geti(L, idx, 1) != LUA_TNUMBER) {
 		lua_pop(L, 1);
 		return create_mem_from_table(L, idx, 1);
 	}
