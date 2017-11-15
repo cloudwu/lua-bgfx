@@ -641,9 +641,8 @@ lsetViewClearMRT(lua_State *L) {
 static int
 ltouch(lua_State *L) {
 	int id = luaL_checkinteger(L, 1);
-	int drawcall = bgfx_touch(id);
-	lua_pushinteger(L, drawcall);
-	return 1;
+	bgfx_touch(id);
+	return 0;
 }
 
 static int
@@ -805,9 +804,8 @@ lsubmit(lua_State *L) {
 	int depth = luaL_optinteger(L, 3, 0);
 	int preserveState = lua_toboolean(L, 4);
 	bgfx_program_handle_t ph = { progid };
-	int drawcall = bgfx_submit(id, ph, depth, preserveState);
-	lua_pushinteger(L, drawcall);
-	return 1;
+	bgfx_submit(id, ph, depth, preserveState);
+	return 0;
 }
 
 #define CASE(v) (strcmp(what,#v) == 0)
@@ -3116,9 +3114,8 @@ lsubmitOcclusionQuery(lua_State *L) {
 	int preserveState = lua_toboolean(L, 5);
 	bgfx_program_handle_t ph = { progid };
 	bgfx_occlusion_query_handle_t oqh = { oqid };
-	int drawcall = bgfx_submit_occlusion_query(id, ph, oqh, depth, preserveState);
-	lua_pushinteger(L, drawcall);
-	return 1;
+	bgfx_submit_occlusion_query(id, ph, oqh, depth, preserveState);
+	return 0;
 }
 
 static int
@@ -3133,9 +3130,8 @@ lsubmitIndirect(lua_State *L) {
 	bgfx_program_handle_t ph = { progid };
 	bgfx_indirect_buffer_handle_t ih = { iid };
 
-	int drawcall = bgfx_submit_indirect(id, ph, ih, start, num, depth, preserveState);
-	lua_pushinteger(L, drawcall);
-	return 1;
+	bgfx_submit_indirect(id, ph, ih, start, num, depth, preserveState);
+	return 0;
 }
 
 static int
@@ -3311,10 +3307,9 @@ ldispatch(lua_State *L) {
 
 	bgfx_program_handle_t  handle = { pid };
 
-	uint32_t dc = bgfx_dispatch(viewid, handle, num[0], num[1], num[2], flags); 
-	lua_pushinteger(L, dc);
+	bgfx_dispatch(viewid, handle, num[0], num[1], num[2], flags); 
 
-	return 1;
+	return 0;
 }
 
 static int
@@ -3327,10 +3322,9 @@ ldispatchIndirect(lua_State *L) {
 	bgfx_program_handle_t  phandle = { pid };
 	bgfx_indirect_buffer_handle_t  ihandle = { iid };
 
-	uint32_t dc = bgfx_dispatch_indirect(viewid, phandle, ihandle, num[0], num[1], flags); 
-	lua_pushinteger(L, dc);
+	bgfx_dispatch_indirect(viewid, phandle, ihandle, num[0], num[1], flags); 
 
-	return 1;
+	return 0;
 }
 
 static int
