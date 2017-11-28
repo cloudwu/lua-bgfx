@@ -609,19 +609,19 @@ clear_flags(lua_State *L, const char *flags) {
 
 static int
 lsetViewClear(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	const char * flags = luaL_checkstring(L, 2);
 	uint32_t rgba = luaL_optinteger(L, 3, 0x000000ff);
 	float depth = luaL_optnumber(L, 4, 1.0f);
 	int stencil = luaL_optinteger(L, 5, 0);
 	int flag = clear_flags(L, flags);
-	bgfx_set_view_clear(id, flag, rgba, depth, stencil);
+	bgfx_set_view_clear(viewid, flag, rgba, depth, stencil);
 	return 0;
 }
 
 static int
 lsetViewClearMRT(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	const char * flags = luaL_checkstring(L, 2);
 	int flag = clear_flags(L, flags);
 	float depth = luaL_checknumber(L, 3);
@@ -633,15 +633,15 @@ lsetViewClearMRT(lua_State *L) {
 	for (i=0;i<n;i++) {
 		c[i] = (uint8_t)luaL_checkinteger(L, 5+i);
 	}
-	bgfx_set_view_clear_mrt(id, flag, depth, stencil,
+	bgfx_set_view_clear_mrt(viewid, flag, depth, stencil,
 		c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
 	return 0;
 }
 
 static int
 ltouch(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
-	bgfx_touch(id);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
+	bgfx_touch(viewid);
 	return 0;
 }
 
@@ -799,7 +799,7 @@ lcreateProgram(lua_State *L) {
 
 static int
 lsubmit(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t id = luaL_checkinteger(L, 1);
 	int progid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
 	int depth = luaL_optinteger(L, 3, 0);
 	int preserveState = lua_toboolean(L, 4);
@@ -1824,7 +1824,7 @@ lcreateIndexBufferCompress(lua_State *L) {
 
 static int
 lsetViewTransform(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	void *view = lua_touserdata(L, 2);	// can be NULL
 	if (view == NULL) {
 		luaL_checktype(L, 2, LUA_TNIL);
@@ -1836,11 +1836,11 @@ lsetViewTransform(lua_State *L) {
 	if (lua_isboolean(L, 4)) {
 		int stero = lua_toboolean(L, 4);
 		void *projR = lua_touserdata(L, 5);
-		bgfx_set_view_transform_stereo(id, view, projL, 
+		bgfx_set_view_transform_stereo(viewid, view, projL,
 			stero ? BGFX_VIEW_STEREO : BGFX_VIEW_NONE, 
 			projR);
 	} else {
-		bgfx_set_view_transform(id, view, projL);
+		bgfx_set_view_transform(viewid, view, projL);
 	}
 	return 0;
 }
@@ -2791,13 +2791,13 @@ lsetViewOrder(lua_State *L) {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	// todo: set first view not 0
 	int n = lua_rawlen(L, 1);
-	uint8_t order[n];
+	bgfx_view_id_t order[n];
 	int i;
 	for (i=0;i<n;i++) {
 		if (lua_geti(L, 1, i+1) != LUA_TNUMBER) {
 			return luaL_error(L, "Invalid view id");
 		}
-		order[i] = (uint8_t)lua_tointeger(L, -1);
+		order[i] = (bgfx_view_id_t)lua_tointeger(L, -1);
 		lua_pop(L, 1);
 	}
 	bgfx_set_view_order(0,n,order);
@@ -2806,24 +2806,24 @@ lsetViewOrder(lua_State *L) {
 
 static int
 lsetViewRect(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	int x = luaL_checkinteger(L, 2);
 	int y = luaL_checkinteger(L, 3);
 	int t = lua_type(L, 4);
 	switch(t) {
 	case LUA_TSTRING: {
 		bgfx_backbuffer_ratio_t ratio = get_ratio(L, 4);
-		bgfx_set_view_rect_auto(id, x, y, ratio);
+		bgfx_set_view_rect_auto(viewid, x, y, ratio);
 		break;
 	}
 	case LUA_TNONE:
 	case LUA_TNIL:
-		bgfx_set_view_rect_auto(id, x, y, BGFX_BACKBUFFER_RATIO_EQUAL);
+		bgfx_set_view_rect_auto(viewid, x, y, BGFX_BACKBUFFER_RATIO_EQUAL);
 		break;
 	case LUA_TNUMBER: {
 		int w = luaL_checkinteger(L, 4);
 		int h = luaL_checkinteger(L, 5);
-		bgfx_set_view_rect(id, x, y, w, h);
+		bgfx_set_view_rect(viewid, x, y, w, h);
 		break;
 	}
 	default:
@@ -2834,21 +2834,21 @@ lsetViewRect(lua_State *L) {
 
 static int
 lsetViewName(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	const char *name = luaL_checkstring(L, 2);
-	bgfx_set_view_name(id, name);
+	bgfx_set_view_name(viewid, name);
 	return 0;
 }
 
 static int
 lsetViewFrameBuffer(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	uint16_t hid = UINT16_MAX;
 	if (!lua_isnoneornil(L, 2)) {
 		hid = BGFX_LUAHANDLE_ID(FRAME_BUFFER, luaL_checkinteger(L, 2));
 	}
 	bgfx_frame_buffer_handle_t h = {hid};
-	bgfx_set_view_frame_buffer(id, h);
+	bgfx_set_view_frame_buffer(viewid, h);
 	return 0;
 }
 
@@ -3300,7 +3300,7 @@ dispatch_opt(lua_State *L, int *num, int n, int index) {
 
 static int
 ldispatch(lua_State *L) {
-	int viewid = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	int pid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
 	int num[3] = {1,1,1};
 	uint8_t flags = dispatch_opt(L, num, 3, 3);
@@ -3314,7 +3314,7 @@ ldispatch(lua_State *L) {
 
 static int
 ldispatchIndirect(lua_State *L) {
-	int viewid = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	int pid = BGFX_LUAHANDLE_ID(PROGRAM, luaL_checkinteger(L, 2));
 	int iid = BGFX_LUAHANDLE_ID(INDIRECT_BUFFER, luaL_checkinteger(L, 3));
 	int num[2] = { 0, 1 };
