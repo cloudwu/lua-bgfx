@@ -2899,7 +2899,7 @@ lgetTexture(lua_State *L) {
  */
 static int
 lblit(lua_State *L) {
-	int id = luaL_checkinteger(L, 1);
+	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
 	uint16_t dstid = BGFX_LUAHANDLE_ID(TEXTURE, luaL_checkinteger(L, 2));
 	int top = lua_gettop(L);
 	uint16_t dstx;
@@ -2949,7 +2949,7 @@ lblit(lua_State *L) {
 	bgfx_texture_handle_t sh = { srcid };
 	bgfx_texture_handle_t dh = { dstid };
 
-	bgfx_blit(id, dh, dstmip, dstx, dsty, dstz, sh, srcmip, srcx, srcy, srcz, width, height, depth);
+	bgfx_blit(viewid, dh, dstmip, dstx, dsty, dstz, sh, srcmip, srcx, srcy, srcz, width, height, depth);
 	return 0;
 }
 
