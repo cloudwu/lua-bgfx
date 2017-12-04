@@ -209,6 +209,7 @@ push_supported(lua_State *L, uint64_t supported) {
 		CAPSNAME(TEXTURE_COMPARE_ALL)   // All texture compare modes are supported.
 		CAPSNAME(TEXTURE_COMPARE_LEQUAL)// Texture compare less equal mode is supported.
 		CAPSNAME(TEXTURE_CUBE_ARRAY)    // Cubemap texture array is supported.
+		CAPSNAME(TEXTURE_DIRECT_ACCESS) // CPU direct access to GPU texture memory.
 		CAPSNAME(TEXTURE_READ_BACK)     // Read-back texture is supported.
 		CAPSNAME(VERTEX_ATTRIB_HALF)    // Vertex attribute half-float is supported.
 		CAPSNAME(VERTEX_ATTRIB_UINT10)  // Vertex attribute 10_10_10_2 is supported.
