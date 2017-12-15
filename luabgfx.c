@@ -2496,17 +2496,30 @@ memory_tostring(lua_State *L) {
 	return 1;
 }
 
-// base 0
+// base 1
 static int
 memory_read(lua_State *L) {
-	int index = luaL_checkinteger(L, 2);
+	int index = luaL_checkinteger(L, 2)-1;
 	uint32_t * data = (uint32_t *)lua_touserdata(L, 1);
 	size_t sz = lua_rawlen(L, 1);
 	if (index < 0 || index * sizeof(uint32_t) >=sz) {
-		luaL_error(L, "out of range");
+		return 0;
 	}
 	lua_pushinteger(L, data[index]);
 	return 1;
+}
+
+static int
+memory_write(lua_State *L) {
+	int index = luaL_checkinteger(L, 2)-1;
+	uint32_t * data = (uint32_t *)lua_touserdata(L, 1);
+	size_t sz = lua_rawlen(L, 1);
+	if (index < 0 || index * sizeof(uint32_t) >=sz) {
+		return luaL_error(L, "out of range %d/[1-%d]", index+1, sz / sizeof(uint32_t));
+	}
+	uint32_t v = luaL_checkinteger(L, 2);
+	data[index] = v;
+	return 0;
 }
 
 /*
@@ -2521,7 +2534,9 @@ lmemoryTexture(lua_State *L) {
 		lua_pushcfunction(L, memory_tostring);
 		lua_setfield(L, -2, "__tostring");
 		lua_pushcfunction(L, memory_read);
-		lua_setfield(L, -2, "__call");
+		lua_setfield(L, -2, "__index");
+		lua_pushcfunction(L, memory_write);
+		lua_setfield(L, -2, "__newindex");
 	}
 	lua_setmetatable(L, -2);
 	return 1;
@@ -2786,11 +2801,25 @@ lcreateTexture2D(lua_State *L) {
 	if (scaled) {
 		handle = bgfx_create_texture_2d_scaled(ratio, hasMips, layers, fmt, flags);
 	} else {
-		size_t sz;
-		const char * data = lua_tolstring(L, idx, &sz);
 		const bgfx_memory_t * mem = NULL;
-		if (data) {
+		switch (lua_type(L, idx)) {
+		case LUA_TSTRING: {
+			size_t sz;
+			const char * data = lua_tolstring(L, idx, &sz);
 			mem = bgfx_copy(data, sz);
+			break;
+		}
+		case LUA_TUSERDATA: {
+			void *data = luaL_checkudata(L, idx, "BGFX_MEMORY");
+			size_t sz = lua_rawlen(L, idx);
+			mem = bgfx_make_ref(data, sz);
+			break;
+		}
+		case LUA_TNIL:
+		case LUA_TNONE:
+			break;
+		default:
+			return luaL_error(L, "Invalid texture data type %s", lua_typename(L, lua_type(L, idx)));
 		}
 		handle = bgfx_create_texture_2d(width, height, hasMips, layers, fmt, flags, mem);
 	}
@@ -2799,6 +2828,36 @@ lcreateTexture2D(lua_State *L) {
 	}
 	lua_pushinteger(L, BGFX_LUAHANDLE(TEXTURE, handle));
 	return 1;
+}
+
+/*
+	integer texture id
+	integer layer
+	integer mip
+	integer x
+	integer y
+	integer w
+	integer h
+	userdata BGFX_MEMORY
+	integer pitch = UINT16_MAX
+ */
+static int
+lupdateTexture2D(lua_State *L) {
+	uint16_t tid = BGFX_LUAHANDLE_ID(TEXTURE, luaL_checkinteger(L, 1));
+	bgfx_texture_handle_t th = { tid };
+	int layer = luaL_checkinteger(L, 2);
+	int mip = luaL_checkinteger(L, 3);
+	int x = luaL_checkinteger(L, 4);
+	int y = luaL_checkinteger(L, 5);
+	int w = luaL_checkinteger(L, 6);
+	int h = luaL_checkinteger(L, 7);
+	void *data = luaL_checkudata(L, 8, "BGFX_MEMORY");
+	size_t sz  = lua_rawlen(L, 8);
+	const bgfx_memory_t *mem = bgfx_make_ref(data, sz);
+	int pitch = luaL_optinteger(L, 9, UINT16_MAX);
+	bgfx_update_texture_2d(th, layer, mip, x, y, w, h, mem, pitch);
+
+	return 0;
 }
 
 /*
@@ -3003,9 +3062,8 @@ lblit(lua_State *L) {
 static int
 lreadTexture(lua_State *L) {
 	uint16_t tid = BGFX_LUAHANDLE_ID(TEXTURE, luaL_checkinteger(L, 1));
-	luaL_checkudata(L, 2, "BGFX_MEMORY");
+	void *data = luaL_checkudata(L, 2, "BGFX_MEMORY");
 	int mip = luaL_optinteger(L, 3, 0);
-	void * data = lua_touserdata(L, 2);
 	bgfx_texture_handle_t th = { tid };
 	int frame = bgfx_read_texture(th, data, mip);
 	lua_pushinteger(L, frame);
@@ -3436,6 +3494,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "memory_texture", lmemoryTexture },
 		{ "create_texture", lcreateTexture },	// create texture from data string (DDS, KTX or PVR texture data)
 		{ "create_texture2d", lcreateTexture2D },
+		{ "update_texture2d", lupdateTexture2D },
 		{ "is_texture_valid", lisTextureValid },
 		{ "set_texture", lsetTexture },
 		{ "set_name", lsetName },

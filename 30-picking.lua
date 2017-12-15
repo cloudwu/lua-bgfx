@@ -105,8 +105,8 @@ local function mainloop()
 		local maxread = 0
 		local ids, idc
 		idc = 0
-		for x = 0, ID_DIM * ID_DIM -1 do
-			local rgba = ctx.m_blitData(x)
+		for x = 1, ID_DIM * ID_DIM do
+			local rgba = ctx.m_blitData[x]
 			-- todo : Direct3D9 is BGRA
 			if rgba ~= 0 then
 				local num = (tmp[rgba] or 0) + 1
