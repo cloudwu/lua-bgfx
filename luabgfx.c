@@ -649,9 +649,9 @@ ltouch(lua_State *L) {
 static int
 lframe(lua_State *L) {
 	int capture = lua_toboolean(L, 1);
-	bgfx_frame(capture);
-	// todo : use result the frame number
-	return 0;
+	int frame = bgfx_frame(capture);
+	lua_pushinteger(L, frame);
+	return 1;
 }
 
 static int
@@ -2488,6 +2488,45 @@ parse_texture_info(lua_State *L, int idx, bgfx_texture_info_t *info) {
 	lua_setfield(L, idx, "cubeMap");
 }
 
+static int
+memory_tostring(lua_State *L) {
+	void * data = lua_touserdata(L, 1);
+	size_t sz = lua_rawlen(L, 1);
+	lua_pushlstring(L, data, sz);
+	return 1;
+}
+
+// base 0
+static int
+memory_read(lua_State *L) {
+	int index = luaL_checkinteger(L, 2);
+	uint32_t * data = (uint32_t *)lua_touserdata(L, 1);
+	size_t sz = lua_rawlen(L, 1);
+	if (index < 0 || index * sizeof(uint32_t) >=sz) {
+		luaL_error(L, "out of range");
+	}
+	lua_pushinteger(L, data[index]);
+	return 1;
+}
+
+/*
+	integer size	(width * height * 4 for RGBA8888)
+ */
+static int
+lmemoryTexture(lua_State *L) {
+	int size = luaL_checkinteger(L, 1);
+	void * data = lua_newuserdata(L, size);
+	memset(data, 0, size);
+	if (luaL_newmetatable(L, "BGFX_MEMORY")) {
+		lua_pushcfunction(L, memory_tostring);
+		lua_setfield(L, -2, "__tostring");
+		lua_pushcfunction(L, memory_read);
+		lua_setfield(L, -2, "__call");
+	}
+	lua_setmetatable(L, -2);
+	return 1;
+}
+
 /*
 	string imgdata
 	string flags	-- [uvw]m/c[-+*]p/a  - MIN + MAG * MIP
@@ -2956,7 +2995,7 @@ lblit(lua_State *L) {
 
 /*
 	integer texture id
-	integer storage size
+	userdata BGFX_MEMORY
 	integer mip = 0
 
 	return string
@@ -2964,15 +3003,12 @@ lblit(lua_State *L) {
 static int
 lreadTexture(lua_State *L) {
 	uint16_t tid = BGFX_LUAHANDLE_ID(TEXTURE, luaL_checkinteger(L, 1));
-	int sz = luaL_checkinteger(L, 2);
+	luaL_checkudata(L, 2, "BGFX_MEMORY");
 	int mip = luaL_optinteger(L, 3, 0);
-	luaL_Buffer b;
-	char *tmp = luaL_buffinitsize(L, &b, sz);
-	// todo: return frame number
+	void * data = lua_touserdata(L, 2);
 	bgfx_texture_handle_t th = { tid };
-	bgfx_read_texture(th, tmp, mip);
-	luaL_addsize(&b, sz);
-	luaL_pushresult(&b);
+	int frame = bgfx_read_texture(th, data, mip);
+	lua_pushinteger(L, frame);
 	return 1;
 }
 
@@ -3397,6 +3433,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "get_uniform_info", lgetUniformInfo },
 		{ "set_uniform", lsetUniform },
 		{ "instance_buffer", lnewInstanceBuffer },
+		{ "memory_texture", lmemoryTexture },
 		{ "create_texture", lcreateTexture },	// create texture from data string (DDS, KTX or PVR texture data)
 		{ "create_texture2d", lcreateTexture2D },
 		{ "is_texture_valid", lisTextureValid },

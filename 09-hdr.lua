@@ -287,7 +287,8 @@ local function mainloop()
 
 	if ctx.m_rb then
 		bgfx.blit(hdrHBlurTonemap, ctx.m_rb, 0, 0, bgfx.get_texture(ctx.m_lum[5]) )
-		settings.lumAvg = bgfx.read_texture(ctx.m_rb, 4)
+		bgfx.read_texture(ctx.m_rb, ctx.lumAvg_data)
+		settings.lumAvg = tostring(ctx.lumAvg_data)
 		update_lumarg()
 	end
 
@@ -357,6 +358,8 @@ local function init(canvas)
 
 	ctx.ortho = math3d.matrix("ortho"):orthomat(0,1,1,0,0,100,0)
 	ctx.m_fbtextures = {}
+
+	ctx.lumAvg_data = bgfx.memory_texture(4)
 
 	ant.mainloop(mainloop)
 end
