@@ -632,7 +632,7 @@ lsetViewClearMRT(lua_State *L) {
 	int n = lua_gettop(L) - 4;
 	int i;
 	for (i=0;i<n;i++) {
-		c[i] = (uint8_t)luaL_checkinteger(L, 5+i);
+		c[i] = (uint8_t)luaL_optinteger(L, 5+i, UINT8_MAX);
 	}
 	bgfx_set_view_clear_mrt(viewid, flag, depth, stencil,
 		c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
@@ -901,6 +901,14 @@ combine_state(lua_State *L, uint64_t *state) {
 			luaL_error(L, "Invalid BLEND FUNC : %s", func);
 		}
 	}
+	else if CASE(BLEND_FUNC_RT) {
+		size_t sz;
+		const char *func = luaL_checklstring(L, -1, &sz);
+		if (sz != 3) {
+			luaL_error(L, "Invalid BLEND FUNC RT : %s", func);
+		}
+		return 1;
+	}
 	else if CASE(BLEND_EQUATION) {
 		*state &= ~BGFX_STATE_BLEND_EQUATION_MASK;
 		size_t sz;
@@ -914,6 +922,22 @@ combine_state(lua_State *L, uint64_t *state) {
 			*state |= BGFX_STATE_BLEND_EQUATION_SEPARATE(ergb, ra);
 		} else {
 			luaL_error(L, "Invalid BLEND EQUATION mode : %s", eq);
+		}
+	}
+	else if CASE(BLEND_ENABLE) {
+		const char *be = luaL_checkstring(L, -1);
+		int i;
+		for (i=0;be[i];i++) {
+			switch(be[i]) {
+			case 'i':
+				*state |= BGFX_STATE_BLEND_INDEPENDENT;
+				break;
+			case 'a':
+				*state |= BGFX_STATE_BLEND_ALPHA_TO_COVERAGE;
+				break;
+			default:
+				luaL_error(L, "Invalid BLEND ENABLE mode %s", be);
+			}
 		}
 	}
 	else if CASE(ALPHA_REF) {
@@ -1043,7 +1067,30 @@ lmakeState(lua_State *L) {
 	while (lua_next(L, 1) != 0) {
 		if (combine_state(L, &state)) {
 			blend_factor = 1;
-			rgba = lua_tointeger(L, -1);
+			if (lua_type(L, -1) == LUA_TNUMBER) {
+				rgba = lua_tointeger(L, -1);
+			} else {
+				size_t sz;
+				const char *func = luaL_checklstring(L, -1, &sz);
+				if (sz != 3) {
+					luaL_error(L, "Invalid BLEND FUNC RT : %s", func);
+				}
+				uint64_t c1 = get_blend_func(L, func[1]);
+				uint64_t c2 = get_blend_func(L, func[2]);
+				switch (func[0]) {
+				case '1':
+					rgba = BGFX_STATE_BLEND_FUNC_RT_1(c1,c2);
+					break;
+				case '2':
+					rgba = BGFX_STATE_BLEND_FUNC_RT_2(c1,c2);
+					break;
+				case '3':
+					rgba = BGFX_STATE_BLEND_FUNC_RT_3(c1,c2);
+					break;
+				default:
+					luaL_error(L, "Invalid BLEND FUNC RT : %s", func);
+				}
+			}
 		}
 		lua_pop(L, 1);
 	}
