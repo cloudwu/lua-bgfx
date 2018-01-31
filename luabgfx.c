@@ -1515,10 +1515,31 @@ create_from_table_int32(lua_State *L, int idx) {
 	return mem;
 }
 
-#include "math3d.h"
-#define DOT(a,b) vector3_dot((const struct vector3 *)a, (const struct vector3 *)b)
-#define CROSS(r,a,b) vector3_cross((struct vector3 *)r, (const struct vector3 *)a, (const struct vector3 *)b)
-#define NORMALIZE(a) vector3_normalize((struct vector3 *)a)
+#include <math.h>
+
+static inline float
+DOT(const float a[3], const float b[3]) {
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+static inline float *
+CROSS(float v[3], const float a[3], const float b[3]) {
+	v[0] = a[1] * b[2] - a[2] * b[1];
+	v[1] = a[2] * b[0] - a[0] * b[2];
+	v[2] = a[0] * b[1] - a[1] * b[0];
+
+	return v;
+}
+
+static inline float *
+NORMALIZE(float v[3]) {
+	float invLen = 1.0f / sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	v[0] *= invLen;
+	v[1] *= invLen;
+	v[2] *= invLen;
+
+	return v;
+}
 
 static void
 calc_targent_vb(lua_State *L, const bgfx_memory_t *mem, bgfx_vertex_decl_t *vd, int index) {
