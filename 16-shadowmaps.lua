@@ -866,10 +866,8 @@ end
 local s_renderState = {
 	Default = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
-			DEPTH_WRITE = true,
 			CULL = "CCW",
 			MSAA = true,
 --			BLEND_FACTOR = 0xffffffff,
@@ -877,20 +875,16 @@ local s_renderState = {
 	},
 	ShadowMap_PackDepth = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
-			DEPTH_WRITE = true,
 			CULL = "CCW",
 			MSAA = true,
 		},
 	},
 	ShadowMap_PackDepthHoriz = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
-			DEPTH_WRITE = true,
 			CULL = "CCW",
 			MSAA = true,
 		},
@@ -905,10 +899,8 @@ local s_renderState = {
 	},
 	ShadowMap_PackDepthVert = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
-			DEPTH_WRITE = true,
 			CULL = "CCW",
 			MSAA = true,
 		},
@@ -923,9 +915,7 @@ local s_renderState = {
 	},
 	Custom_BlendLightTexture = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
 			BLEND_FUNC = "sS", -- BGFX_STATE_BLEND_SRC_COLOR, BGFX_STATE_BLEND_INV_SRC_COLOR
 			CULL = "CCW",
@@ -934,7 +924,7 @@ local s_renderState = {
 	},
 	Custom_DrawPlaneBottom = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
+			WRITE_MASK = "RGB",
 			CULL = "CW",
 			MSAA = true,
 		},
@@ -2179,8 +2169,7 @@ local function init(canvas)
 	}
 
 	ctx.state_rgba = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true
+		WRITE_MASK = "RGBA",
 	}
 
 	update_default_settings()

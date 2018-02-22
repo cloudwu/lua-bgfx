@@ -305,16 +305,12 @@ local function init(canvas)
 	}
 	ctx.tvb = bgfx.transient_buffer "fffdff"
 	ctx.state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
-		DEPTH_WRITE = false,
+		WRITE_MASK = "RGBA",
 		MSAA = false,
 	}
 	ctx.mesh_state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBAZ",
 		DEPTH_TEST = "LESS",
-		DEPTH_WRITE = true,
 		CULL = "CCW",
 		MSAA = true,
 	}

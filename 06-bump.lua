@@ -93,9 +93,7 @@ local function init(canvas)
 	}
 
 	ctx.state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
-		DEPTH_WRITE = true,
+		WRITE_MASK = "RGBAZ",
 		DEPTH_TEST = "LESS",
 		MSAA = true,
 	}

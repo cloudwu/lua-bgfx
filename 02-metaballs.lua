@@ -525,7 +525,7 @@ local function mainloop()
 	bgfx.set_transform(mat)
 	ctx.tvb:setV(0, 0, numVertices)
 	bgfx.set_state()	-- default state
-	-- { RGB_WRITE = true , ALPHA_WRITE = true , DEPTH_TEST = "LESS", DEPTH_WRITE = true, CULL = "CW", MSAA = true }
+	-- { WRITE_MASK = "RGBAZ", DEPTH_TEST = "LESS", CULL = "CW", MSAA = true }
 	bgfx.submit(0, ctx.prog)
 	bgfx.frame()
 end

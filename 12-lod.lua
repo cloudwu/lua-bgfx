@@ -140,8 +140,7 @@ local function init(canvas)
 --	bgfx.set_debug "ST"
 	ctx.stateOpaque = nil -- default
 	ctx.stateTransparent = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 		DEPTH_TEST = "LESS",
 		MSAA = true,
 		CULL = "CCW",

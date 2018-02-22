@@ -220,9 +220,7 @@ local function init(canvas)
 	ctx.m_state = {}
 	ctx.m_state[1] = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
 			CULL = "CCW",
 			MSAA = true,
@@ -233,9 +231,7 @@ local function init(canvas)
 	}
 	ctx.m_state[2] = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			DEPTH_TEST = "LESS",
 			CULL = "CCW",
 			MSAA = true,

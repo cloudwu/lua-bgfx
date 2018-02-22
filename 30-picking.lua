@@ -201,9 +201,7 @@ local function init(canvas)
 	ctx.m_pickingFB = bgfx.create_frame_buffer({ctx.m_pickingRT,ctx.m_pickingRTDepth}, true)
 
 	ctx.state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
-		DEPTH_WRITE = true,
+		WRITE_MASK = "RGBAZ",
 		DEPTH_TEST = "LESS",
 		CULL = "CCW",
 		MSAA = true,

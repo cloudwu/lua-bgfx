@@ -260,24 +260,21 @@ local function init(canvas)
 
 	ctx.state0 = bgfx.make_state {
 		CULL = "CW",
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 		DEPTH_TEST = "LESS",
 		MSAA = true,
 		BLEND = "ALPHA",
 	}
 	ctx.state1 = bgfx.make_state {
 		CULL = "CW",
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 		DEPTH_TEST = "ALWAYS",
 		MSAA = true,
 		BLEND_FUNC = "110A",	-- BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_INV_SRC_ALPHA)
 	}
 	ctx.state2 = bgfx.make_state {
 		CULL = "CW",
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 		DEPTH_TEST = "ALWAYS",
 		MSAA = true,
 		BLEND_FUNC = "11", -- BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE)
@@ -285,7 +282,7 @@ local function init(canvas)
 		BLEND_FUNC_RT = "10s",	-- BGFX_STATE_BLEND_FUNC_RT_1(BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_SRC_COLOR)
 	}
 	ctx.state_screen = bgfx.make_state {
-		RGB_WRITE = true,
+		WRITE_MASK = "RGB",
 		BLEND_FUNC = "Aa",	-- BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_SRC_ALPHA)
 	}
 

@@ -129,7 +129,7 @@ local box = {} ; for i = 1,8 do math3d.vector(i, box) end
 
 local ScissorRect_index = {0,1,1,2,2,3,3,0}
 local ScissorRect_state = bgfx.make_state {
-					RGB_WRITE = true,
+					WRITE_MASK = "RGB",
 					PT = "LINES",
 					BLEND = "ALPHA"
 				}
@@ -464,26 +464,22 @@ local function init()
 	ctx.m_lightBuffer = nil
 
 	ctx.state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
-		DEPTH_WRITE = true,
+		WRITE_MASK = "RGBAZ",
 		DEPTH_TEST = "LESS",
 		MSAA = true
 	}
 
 	ctx.light_state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 		BLEND = "ADD",
 	}
 
 	ctx.combine_state = bgfx.make_state {
-		RGB_WRITE = true,
-		ALPHA_WRITE = true,
+		WRITE_MASK = "RGBA",
 	}
 
 	ctx.gbuffer_state = bgfx.make_state {
-		RGB_WRITE = true,
+		WRITE_MASK = "RGB",
 	}
 	ctx.s_texelHalf = ant.caps.rendererType == "DIRECT3D9" and 0.5 or 0
 

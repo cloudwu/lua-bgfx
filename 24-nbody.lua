@@ -263,7 +263,7 @@ local function init(canvas)
 	bgfx.set_debug "T"
 
 	ctx.state = bgfx.make_state {
-		RGB_WRITE = true,
+		WRITE_MASK = "RGB",
 		BLEND = "ADD",
 		DEPTH_TEST = "ALWAYS",
 	}

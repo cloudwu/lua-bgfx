@@ -177,8 +177,7 @@ end
 local s_renderStates = {
 	StencilReflection_CraftStencil = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBZ",
 			DEPTH_TEST = "LESS",
 			MSAA = true,
 		},
@@ -193,10 +192,8 @@ local s_renderStates = {
 	},
 	StencilReflection_DrawReflected = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			ALPHA_WRITE = true,
+			WRITE_MASK = "RGBAZ",
 			BLEND_FUNC = "aA",	-- BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA
-			DEPTH_WRITE = true,
 			DEPTH_TEST = "LESS",
 			CULL = "CW",
 			MSAA = true,
@@ -212,8 +209,7 @@ local s_renderStates = {
 	},
 	StencilReflection_BlendPlane = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBZ",
 			BLEND_FUNC = "1s",	-- BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_SRC_COLOR
 			DEPTH_TEST = "LESS",
 			CULL = "CCW",
@@ -222,8 +218,7 @@ local s_renderStates = {
 	},
 	StencilReflection_DrawScene = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBZ",
 			DEPTH_TEST = "LESS",
 			CULL = "CCW",
 			MSAA = true,
@@ -231,8 +226,7 @@ local s_renderStates = {
 	},
 	ProjectionShadows_DrawAmbient = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			DEPTH_WRITE = true , -- write depth !
+			WRITE_MASK = "RGBZ",  -- write depth !
 			DEPTH_TEST = "LESS",
 			CULL = "CCW",
 			MSAA = true,
@@ -254,7 +248,7 @@ local s_renderStates = {
 	},
 	ProjectionShadows_DrawDiffuse = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
+			WRITE_MASK = "RGB",
 			BLEND_FUNC = "11",  --BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE
 			DEPTH_TEST = "EQUAL",
 			CULL = "CCW",
@@ -271,8 +265,7 @@ local s_renderStates = {
 	},
 	Custom_BlendLightTexture = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
-			DEPTH_WRITE = true,
+			WRITE_MASK = "RGBZ",
 			DEPTH_TEST = "LESS",
 			BLEND_FUNC = "sS", -- BGFX_STATE_BLEND_SRC_COLOR, BGFX_STATE_BLEND_INV_SRC_COLOR
 			CULL = "CCW",
@@ -281,7 +274,7 @@ local s_renderStates = {
 	},
 	Custom_DrawPlaneBottom = {
 		state = bgfx.make_state {
-			RGB_WRITE = true,
+			WRITE_MASK = "RGB",
 			CULL = "CW",
 			MSAA = true,
 		},

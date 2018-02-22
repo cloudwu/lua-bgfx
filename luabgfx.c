@@ -12,6 +12,23 @@
 #include <bgfx/c99/platform.h>
 #include "luabgfx.h"
 
+#if _MSC_VER > 0
+#include <malloc.h>
+
+#	ifdef USING_ALLOCA_FOR_VLA
+#		define VLA(_TYPE, _VAR, _SIZE)	_TYPE _VAR = (_TYPE*)_alloca(sizeof(_TYPE) * (_SIZE))
+#	else//!USING_ALLOCA_FOR_VLA
+#		define V(_SIZE)	4096
+#	endif //USING_ALLOCA_FOR_VLA
+#else //!(_MSC_VER > 0)
+#	ifdef USING_ALLOCA_FOR_VLA
+#		define VLA(_TYPE, _VAR, _SIZE) _TYPE _VAR[(_SIZE)]
+#	else //!USING_ALLOCA_FOR_VLA
+#		define V(_SIZE)	(_SIZE)
+#	endif //USING_ALLOCA_FOR_VLA
+
+#endif //_MSC_VER > 0
+
 static void *
 getfield(lua_State *L, const char *key) {
 	lua_getfield(L, 1, key);
@@ -382,6 +399,7 @@ push_limits(lua_State *L, const bgfx_caps_limits_t *lim) {
 	PUSH_LIMIT(maxDrawCalls)
 	PUSH_LIMIT(maxBlits)
 	PUSH_LIMIT(maxTextureSize)
+	PUSH_LIMIT(maxTextureLayers)
 	PUSH_LIMIT(maxViews)
 	PUSH_LIMIT(maxFrameBuffers)
 	PUSH_LIMIT(maxFBAttachments)
@@ -953,21 +971,31 @@ combine_state(lua_State *L, uint64_t *state) {
 			*state |= BGFX_STATE_MSAA; 
 		else 
 			*state &= ~BGFX_STATE_MSAA;
-	} else if CASE(ALPHA_WRITE) {
-		if (lua_toboolean(L, -1))
-			*state |= BGFX_STATE_ALPHA_WRITE; 
-		else 
-			*state &= ~BGFX_STATE_ALPHA_WRITE;
-	} else if CASE(DEPTH_WRITE) {
-		if (lua_toboolean(L, -1))
-			*state |= BGFX_STATE_DEPTH_WRITE; 
-		else 
-			*state &= ~BGFX_STATE_DEPTH_WRITE;
-	} else if CASE(RGB_WRITE) {
-		if (lua_toboolean(L, -1))
-			*state |= BGFX_STATE_RGB_WRITE; 
-		else 
-			*state &= ~BGFX_STATE_RGB_WRITE;
+	} else if CASE(WRITE_MASK) {
+		*state &= ~BGFX_STATE_WRITE_MASK;
+		const char * mask = luaL_checkstring(L, -1);
+		int i;
+		for (i=0;mask[i];i++) {
+			switch (mask[i]) {
+			case 'R':
+				*state |= BGFX_STATE_WRITE_R;
+				break;
+			case 'G':
+				*state |= BGFX_STATE_WRITE_G;
+				break;
+			case 'B':
+				*state |= BGFX_STATE_WRITE_B;
+				break;
+			case 'A':
+				*state |= BGFX_STATE_WRITE_A;
+				break;
+			case 'Z':
+				*state |= BGFX_STATE_WRITE_Z;
+				break;
+			default:
+				return luaL_error(L, "Invalid WRITE_MASK %s", mask);
+			}
+		}
 	} else if CASE(DEPTH_TEST) {
 		*state &= ~BGFX_STATE_DEPTH_TEST_MASK;
 		const char * what = luaL_checkstring(L, -1);
@@ -1042,11 +1070,11 @@ get_state(lua_State *L, int idx, uint64_t *pstate, uint32_t *prgba) {
 static int
 lmakeState(lua_State *L) {
 	luaL_checktype(L, 1, LUA_TTABLE);
-/*#define BGFX_STATE_DEFAULT (0            \
-			| BGFX_STATE_RGB_WRITE       \
-			| BGFX_STATE_ALPHA_WRITE     \
+/*#define BGFX_STATE_DEFAULT (0          \
+			| BGFX_STATE_WRITE_RGB       \
+			| BGFX_STATE_WRITE_A         \
 			| BGFX_STATE_DEPTH_TEST_LESS \
-			| BGFX_STATE_DEPTH_WRITE     \
+			| BGFX_STATE_WRITE_Z         \
 			| BGFX_STATE_CULL_CW         \
 			| BGFX_STATE_MSAA            \
 			)
@@ -2216,7 +2244,7 @@ lsetIDB(lua_State *L) {
 			return luaL_error(L, "Invalid instance data buffer num %d/%d",num, v->num);
 		}
 	}
-	bgfx_set_instance_data_buffer(&v->idb, num);
+	bgfx_set_instance_data_buffer(&v->idb, 0, num);
 	v->num = 0;
 	return 0;
 }
@@ -2399,7 +2427,7 @@ lsetUniform(lua_State *L) {
 		default:
 			return luaL_error(L, "Invalid uniform type %d", info.type);
 		}
-		uint8_t buffer[sz * n];
+		uint8_t buffer[V(sz * n)];
 		if (info.type == BGFX_UNIFORM_TYPE_INT1) {
 			int i;
 			int32_t * data = (int32_t *)buffer;
@@ -2756,7 +2784,7 @@ create_fb_mrt(lua_State *L) {
 		luaL_error(L, "At lease one frame buffer");
 	}
 	int destroy = lua_toboolean(L, 2);
-	bgfx_texture_handle_t handles[n];
+	bgfx_texture_handle_t handles[V(n)];
 	int i;
 	for (i=0;i<n;i++) {
 		if (lua_geti(L, 1, i+1) != LUA_TNUMBER) {
@@ -2958,7 +2986,7 @@ lsetViewOrder(lua_State *L) {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	// todo: set first view not 0
 	int n = lua_rawlen(L, 1);
-	bgfx_view_id_t order[n];
+	bgfx_view_id_t order[V(n)];
 	int i;
 	for (i=0;i<n;i++) {
 		if (lua_geti(L, 1, i+1) != LUA_TNUMBER) {
@@ -3496,7 +3524,7 @@ lgetShaderUniforms(lua_State *L) {
 	bgfx_shader_handle_t shader = { sid };
 	uint16_t n = bgfx_get_shader_uniforms(shader, NULL, 0);
 	lua_createtable(L, n, 0);
-	bgfx_uniform_handle_t u[n];
+	bgfx_uniform_handle_t u[V(n)];
 	bgfx_get_shader_uniforms(shader, u, n);
 	int i;
 	for (i=0;i<n;i++) {
