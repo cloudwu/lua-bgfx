@@ -2190,7 +2190,7 @@ function canvas:resize_cb(w,h)
 	viewmat:lookatp(0,30,-60, 0,5,0)
 	projmat:projmat(60, ctx.width/ctx.height, 0.1, 2000)
 
-	ctx.projHeight = 1/math.tan(math.rad(60)*0.5)
+	ctx.projHeight = math.tan(math.rad(60)*0.5)
 	ctx.projWidth = ctx.projHeight * (ctx.width/ctx.height)
 end
 
