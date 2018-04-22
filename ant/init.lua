@@ -8,7 +8,12 @@ local init_flag
 function ant.init(args)
 	assert(init_flag == nil)
 	bgfx.set_platform_data(args)
-	bgfx.init(args.renderer)
+	bgfx.init {
+		renderer = args.renderer,
+		width = args.width,
+		height = args.height,
+		reset = args.reset,
+	}
 	ant.caps = bgfx.get_caps()
 	init_flag = true
 	framework.init_all()

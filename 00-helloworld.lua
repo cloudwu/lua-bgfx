@@ -286,9 +286,12 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
+local function init(canvas, width, height, reset)
 	ant.init {
 		nwh = iup.GetAttributeData(canvas,"HWND"),
+		width = width,
+		height = height,
+		reset = reset,
 	}
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 	bgfx.set_debug "T"
@@ -298,7 +301,7 @@ end
 
 function canvas:resize_cb(w,h)
 	if init then
-		init(self)
+		init(self,w,h,"v")
 		init = nil
 	end
 	bgfx.set_view_rect(0, 0, 0, w, h)
