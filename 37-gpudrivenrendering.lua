@@ -538,7 +538,7 @@ function canvas:resize_cb(w,h)
 	ctx.m_hiZheight = 2 ^ math.floor(math.log(h,2))
 
 	if init then
-		init(self,w,h,"v")
+		init(self)
 		init = nil
 	end
 	bgfx.reset(w,h,"v")

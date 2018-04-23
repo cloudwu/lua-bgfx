@@ -213,7 +213,7 @@ linit(lua_State *L) {
 
 	init.resolution.width = 1280;
 	init.resolution.height = 720;
-	init.resolution.flags = BGFX_RESET_NONE;	// reset flags
+	init.resolution.reset = BGFX_RESET_NONE;
 
 	init.limits.maxEncoders     = 8;	// BGFX_CONFIG_DEFAULT_MAX_ENCODERS;
 	init.limits.transientVbSize = (6<<20);	// BGFX_CONFIG_TRANSIENT_VERTEX_BUFFER_SIZE
@@ -232,7 +232,7 @@ linit(lua_State *L) {
 		read_uint32(L, 1, "width", &init.resolution.width);
 		read_uint32(L, 1, "height", &init.resolution.height);
 		if (lua_getfield(L, 1, "reset") == LUA_TSTRING) {
-			init.resolution.flags = reset_flags(L, -1);
+			init.resolution.reset = reset_flags(L, -1);
 		}
 		lua_pop(L, 1);
 		if (lua_getfield(L, 1, "maxEncoders") == LUA_TNUMBER) {
