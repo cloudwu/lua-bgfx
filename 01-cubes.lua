@@ -38,8 +38,8 @@ end
 local function init(canvas)
 	ant.init {
 		nwh = iup.GetAttributeData(canvas,"HWND"),
---		renderer = "DIRECT3D12",
---		renderer = "OPENGL",
+--		renderer = "DIRECT3D9",
+		renderer = "OPENGL",
 	}
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 --	bgfx.set_debug "ST"

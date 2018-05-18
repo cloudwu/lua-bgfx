@@ -198,6 +198,7 @@ local function init(canvas)
 	-- texture.
 
 	ctx.m_blitTex = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "RGBA8", "bwbr-p+p*pucvc")	-- bw:BGFX_TEXTURE_BLIT_DST br:BGFX_TEXTURE_READ_BACK
+
 	ctx.m_pickingFB = bgfx.create_frame_buffer({ctx.m_pickingRT,ctx.m_pickingRTDepth}, true)
 
 	ctx.state = bgfx.make_state {

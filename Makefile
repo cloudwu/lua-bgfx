@@ -17,8 +17,8 @@ math3d.dll : libmath.c
 	$(CC) $(CFLAGS) --shared -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(LUALIB)
 
 # bgfx
-#BGFXVER = Debug
-BGFXVER = Release
+BGFXVER = Debug
+#BGFXVER = Release
 BGFXLIB = -L$(BGFXSRC)/.build/win64_mingw-gcc/bin -lbgfx$(BGFXVER) -lbimg$(BGFXVER) -lbx$(BGFXVER) -lstdc++ -lgdi32 -lpsapi -luuid
 BGFXINC = -I$(BGFXSRC)/include -I$(BXSRC)/include/compat/mingw -I$(BXSRC)/include
 BGFXUTILLIB = -lexample-common$(BGFXVER)
