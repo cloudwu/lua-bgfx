@@ -37,6 +37,7 @@
 struct screenshot {
 	uint32_t width;
 	uint32_t height;
+	uint32_t pitch;
 	uint32_t size;
 	void *data;
 	char *name;
@@ -188,6 +189,7 @@ cb_screen_shot(bgfx_callback_interface_t *self, const char* file, uint32_t width
 	s->data = malloc(size);
 	s->width = width;
 	s->height = height;
+	s->pitch = pitch;
 	s->size = size;
 	uint8_t * dst = (uint8_t *)s->data;
 	const uint8_t * src = (const uint8_t *)data;
@@ -3751,6 +3753,7 @@ lgetScreenshot(lua_State *L) {
 	lua_pushstring(L, s->name);
 	lua_pushinteger(L, s->width);
 	lua_pushinteger(L, s->height);
+	lua_pushinteger(L, s->pitch);
 	if (memptr) {
 		lua_pushlightuserdata(L, s->data);
 		lua_pushinteger(L, s->size);
@@ -3759,7 +3762,7 @@ lgetScreenshot(lua_State *L) {
 		lua_pushlstring(L, (const char *)s->data, s->size);
 	}
 	ss_free(s);
-	return memptr ? 5 : 4;
+	return memptr ? 6 : 5;
 }
 
 LUAMOD_API int
