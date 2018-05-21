@@ -1,5 +1,6 @@
 local ant = require "ant"
 local util = require "ant.util"
+local common = require "ant.common"
 local math3d = require "ant.math"
 local bgfx = require "bgfx"
 
@@ -7,6 +8,8 @@ canvas = iup.canvas{
 --	rastersize = "1024x768",
 --	rastersize = "400x300",
 }
+
+canvas.keypress_cb = common.keypress_cb
 
 dlg = iup.dialog {
   canvas,
@@ -17,6 +20,7 @@ dlg = iup.dialog {
 local ctx = {}
 local time = 0
 local function mainloop()
+	common.save_screenshot "screenshot.ppm"
 	math3d.reset()
 	bgfx.touch(0)
 	local mat = math3d.matrix()
