@@ -53,7 +53,7 @@ local function mainloop()
 		end
 
 		local idx = math.random(1, kDimWidth*kDimHeight)
-		bgfx.update_dynamic_vertex_buffer(ctx.m_vbh[idx], 0, tmp)
+		bgfx.update(ctx.m_vbh[idx], 0, tmp)
 	end
 
 	-- Submit 11x11 cubes.
