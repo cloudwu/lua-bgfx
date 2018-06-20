@@ -182,7 +182,7 @@ local function renderMainPass()
 	bgfx.set_state()
 
 	-- Set "material" data (currently a colour only)
-	bgfx.set_uniform(ctx.u_colour, ctx.m_materials)
+	bgfx.set_uniform(ctx.u_colour, table.unpack(ctx.m_materials))
 
 	-- Set vertex and index buffer.
 	bgfx.set_vertex_buffer(0, ctx.m_allPropsVertexbufferHandle)

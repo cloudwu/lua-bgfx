@@ -13,6 +13,8 @@ function ant.init(args)
 		width = args.width,
 		height = args.height,
 		reset = args.reset,
+		debug = args.debug,
+		profile = args.profile,
 	}
 	ant.caps = bgfx.get_caps()
 	init_flag = true

@@ -25,8 +25,8 @@ local function setlight()
 			3
 		)
 	end
-	bgfx.set_uniform(ctx.u_lightPosRadius, ctx.light)
-	bgfx.set_uniform(ctx.u_lightRgbInnerR, ctx.lightRgbInnerR)
+	bgfx.set_uniform(ctx.u_lightPosRadius, table.unpack(ctx.light))
+	bgfx.set_uniform(ctx.u_lightRgbInnerR, table.unpack(ctx.lightRgbInnerR))
 end
 
 local function mainloop()

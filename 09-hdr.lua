@@ -124,7 +124,7 @@ local function setOffsets2x2Lum(handle, width, height)
 		end
 	end
 
-	bgfx.set_uniform(handle, offsets, num)
+	bgfx.set_uniform(handle, table.unpack(offsets))
 end
 
 local function setOffsets4x4Lum(handle, width, height)
@@ -139,7 +139,7 @@ local function setOffsets4x4Lum(handle, width, height)
 		end
 	end
 
-	bgfx.set_uniform(handle, offsets, num)
+	bgfx.set_uniform(handle, table.unpack(offsets))
 end
 
 local time = 0

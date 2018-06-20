@@ -208,12 +208,12 @@ local function mainloop()
 		RESET = false
 		bgfx.set_buffer(0, ctx.m_prevPositionBuffer0, "w")
 		bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "w")
-		bgfx.set_uniform(ctx.u_params, params)
+		bgfx.set_uniform(ctx.u_params, table.unpack(params))
 		bgfx.dispatch(0, ctx.m_initInstancesProgram, kMaxParticleCount // kThreadGroupUpdateSize, 1, 1)
 	end
 
 	if useIndirect then
-		bgfx.set_uniform(ctx.u_params, params)
+		bgfx.set_uniform(ctx.u_params, table.unpack(params))
 		bgfx.set_buffer(0, ctx.m_indirectBuffer, "w")
 		bgfx.dispatch(0, ctx.m_indirectProgram)
 	end
@@ -222,7 +222,7 @@ local function mainloop()
 	bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "r")
 	bgfx.set_buffer(2, ctx.m_prevPositionBuffer1, "w")
 	bgfx.set_buffer(3, ctx.m_currPositionBuffer1, "w")
-	bgfx.set_uniform(ctx.u_params, params)
+	bgfx.set_uniform(ctx.u_params, table.unpack(params))
 
 	if useIndirect then
 		bgfx.dispatch_indirect(0, ctx.m_updateInstancesProgram, ctx.m_indirectBuffer, 1)
@@ -317,7 +317,7 @@ local function init(canvas)
 		math3d.vector(i, ctx.m_paramsData)
 	end
 
-	bgfx.set_uniform(ctx.u_params, packParams())
+	bgfx.set_uniform(ctx.u_params, table.unpack(packParams()))
 
 	bgfx.set_buffer(0, ctx.m_prevPositionBuffer0, "w")
 	bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "w")

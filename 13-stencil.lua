@@ -168,8 +168,8 @@ end
 local function submitPerDrawUniforms()
 	bgfx.set_uniform(Uniforms.u_params, Uniforms.params)
 	bgfx.set_uniform(Uniforms.u_color, Uniforms.color)
-	bgfx.set_uniform(Uniforms.u_lightPosRadius, Uniforms.lightPosRadius)
-	bgfx.set_uniform(Uniforms.u_lightRgbInnerR, Uniforms.lightRgbInnerR)
+	bgfx.set_uniform(Uniforms.u_lightPosRadius, table.unpack(Uniforms.lightPosRadius))
+	bgfx.set_uniform(Uniforms.u_lightRgbInnerR, table.unpack(Uniforms.lightRgbInnerR))
 end
 
 -- render state
