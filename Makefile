@@ -7,7 +7,7 @@ LUALIB = -L/usr/local/bin -llua53
 
 CC= gcc
 CXX = g++
-CFLAGS = -O2 -Wall
+CFLAGS = -g -Wall
 
 # math3d
 

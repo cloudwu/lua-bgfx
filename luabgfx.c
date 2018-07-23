@@ -34,6 +34,8 @@
 
 // screenshot queue length
 #define MAX_SCREENSHOT 16
+// 64K log ring buffer
+#define MAX_LOGBUFFER (64*1024)
 
 struct screenshot {
 	uint32_t width;
@@ -51,9 +53,17 @@ struct screenshot_queue {
 	struct screenshot *q[MAX_SCREENSHOT];
 };
 
+struct log_cache {
+	spinlock_t lock;
+	uint64_t head;
+	uint64_t tail;
+	char log[MAX_LOGBUFFER];
+};
+
 struct callback {
 	bgfx_callback_interface_t base;
 	struct screenshot_queue ss;
+	struct log_cache lc;
 };
 
 static void *
@@ -103,17 +113,50 @@ renderer_type_id(lua_State *L, int index) {
 }
 
 static void
+append_log(struct log_cache *lc, const char * buffer, int n) {
+	spin_lock(lc);
+	int sz = (int)(lc->tail - lc->head);	// sz must less than MAX_LOGBUFFER
+	if (sz + n > MAX_LOGBUFFER)
+		n = MAX_LOGBUFFER - sz;
+	int offset = lc->tail % MAX_LOGBUFFER;
+	int part = MAX_LOGBUFFER - offset;
+	if (part >= n) {
+		// only one part
+		memcpy(lc->log + offset, buffer, n);
+	} else {
+		// ring buffer rewind
+		memcpy(lc->log + offset, buffer, part);
+		memcpy(lc->log, buffer + part, n - part);
+	}
+	lc->tail += n;
+	spin_unlock(lc);
+}
+
+static void
 cb_fatal(bgfx_callback_interface_t *self, bgfx_fatal_t code, const char *str) {
-	fprintf(stderr, "Fatal error: 0x%08x: %s", code, str);
-	fflush(stderr);
-	abort();
+	char tmp[MAX_LOGBUFFER];
+	int n = snprintf(tmp, sizeof(tmp), "Fatal error: 0x%08x: %s", code, str);
+	if (n > MAX_LOGBUFFER) {
+		// truncated
+		n = MAX_LOGBUFFER;
+	}
+
+	append_log(&(((struct callback *)self)->lc), tmp, n);
 }
 
 static void
 cb_trace_vargs(bgfx_callback_interface_t *self, const char *file, uint16_t line, const char *format, va_list ap) {
-	fprintf(stderr, "%s (%d): ", file, line);
-	vfprintf(stderr, format, ap);
-	fflush(stderr);
+	char tmp[MAX_LOGBUFFER];
+	int n = sprintf(tmp, "%s (%d): ", file, line);
+
+	n += vsnprintf(tmp+n, sizeof(tmp)-n, format, ap);
+
+	if (n > MAX_LOGBUFFER) {
+		// truncated
+		n = MAX_LOGBUFFER;
+	}
+
+	append_log(&(((struct callback *)self)->lc), tmp, n);
 }
 
 // todo: bgfx callback
@@ -235,9 +278,6 @@ reset_flags(lua_State *L, int index) {
 			case 'v' : f |= BGFX_RESET_VSYNC; break;
 			case 'a' : f |= BGFX_RESET_MAXANISOTROPY; break;
 			case 'c' : f |= BGFX_RESET_CAPTURE; break;
-			case 'h' : f |= BGFX_RESET_HMD; break;
-			case 'd' : f |= BGFX_RESET_HMD_DEBUG; break;
-			case 'r' : f |= BGFX_RESET_HMD_RECENTER; break;
 			case 'u' : f |= BGFX_RESET_FLUSH_AFTER_RENDER; break;
 			case 'i' : f |= BGFX_RESET_FLIP_AFTER_RENDER; break;
 			case 's' : f |= BGFX_RESET_SRGB_BACKBUFFER; break;
@@ -386,7 +426,6 @@ push_supported(lua_State *L, uint64_t supported) {
 		CAPSNAME(FRAGMENT_ORDERING)     // Fragment ordering is available in fragment shader.
 		CAPSNAME(GRAPHICS_DEBUGGER)     // Graphics debugger is present.
 		CAPSNAME(HIDPI)                 // HiDPI rendering is supported.
-		CAPSNAME(HMD)                   // Head Mounted Display is available.
 		CAPSNAME(INDEX32)               // 32-bit indices are supported.
 		CAPSNAME(INSTANCING)            // Instancing is supported.
 		CAPSNAME(OCCLUSION_QUERY)       // Occlusion query is supported.
@@ -743,9 +782,6 @@ lgetStats(lua_State *L) {
 	v        : BGFX_RESET_VSYNC - Enable V-Sync.
 	a        : BGFX_RESET_MAXANISOTROPY - Turn on/off max anisotropy.
 	c        : BGFX_RESET_CAPTURE - Begin screen capture.
-	h        : BGFX_RESET_HMD - HMD stereo rendering.
-	d        : BGFX_RESET_HMD_DEBUG - HMD stereo rendering debug mode.
-	r        : BGFX_RESET_HMD_RECENTER - HMD calibration.
 	u        : BGFX_RESET_FLUSH_AFTER_RENDER - Flush rendering after submitting to GPU.
 	i        : BGFX_RESET_FLIP_AFTER_RENDER - This flag specifies where flip occurs. Default behavior is that flip occurs before rendering new frame. This flag only has effect when BGFX_CONFIG_MULTITHREADED=0.
 	s        : BGFX_RESET_SRGB_BACKBUFFER - Enable sRGB backbuffer.
@@ -1303,24 +1339,24 @@ struct AttribNamePairs {
 };
 
 static struct AttribNamePairs attrib_name_pairs[BGFX_ATTRIB_COUNT] = {
-		"POSITION", BGFX_ATTRIB_POSITION,
-		"NORMAL", BGFX_ATTRIB_NORMAL,
-		"TANGENT", BGFX_ATTRIB_TANGENT,
-		"BITANGENT", BGFX_ATTRIB_BITANGENT,
-		"COLOR0", BGFX_ATTRIB_COLOR0,
-		"COLOR1", BGFX_ATTRIB_COLOR1,
-		"COLOR2", BGFX_ATTRIB_COLOR2,
-		"COLOR3", BGFX_ATTRIB_COLOR3,
-		"INDICES", BGFX_ATTRIB_INDICES,
-		"WEIGHT", BGFX_ATTRIB_WEIGHT,
-		"TEXCOORD0", BGFX_ATTRIB_TEXCOORD0,
-		"TEXCOORD1", BGFX_ATTRIB_TEXCOORD1,
-		"TEXCOORD2", BGFX_ATTRIB_TEXCOORD2,
-		"TEXCOORD3", BGFX_ATTRIB_TEXCOORD3,
-		"TEXCOORD4", BGFX_ATTRIB_TEXCOORD4,
-		"TEXCOORD5", BGFX_ATTRIB_TEXCOORD5,
-		"TEXCOORD6", BGFX_ATTRIB_TEXCOORD6,
-		"TEXCOORD7", BGFX_ATTRIB_TEXCOORD7,		
+	{ "POSITION", BGFX_ATTRIB_POSITION },
+	{ "NORMAL", BGFX_ATTRIB_NORMAL },
+	{ "TANGENT", BGFX_ATTRIB_TANGENT },
+	{ "BITANGENT", BGFX_ATTRIB_BITANGENT },
+	{ "COLOR0", BGFX_ATTRIB_COLOR0 },
+	{ "COLOR1", BGFX_ATTRIB_COLOR1 },
+	{ "COLOR2", BGFX_ATTRIB_COLOR2 },
+	{ "COLOR3", BGFX_ATTRIB_COLOR3 },
+	{ "INDICES", BGFX_ATTRIB_INDICES},
+	{ "WEIGHT", BGFX_ATTRIB_WEIGHT},
+	{ "TEXCOORD0", BGFX_ATTRIB_TEXCOORD0},
+	{ "TEXCOORD1", BGFX_ATTRIB_TEXCOORD1},
+	{ "TEXCOORD2", BGFX_ATTRIB_TEXCOORD2},
+	{ "TEXCOORD3", BGFX_ATTRIB_TEXCOORD3},
+	{ "TEXCOORD4", BGFX_ATTRIB_TEXCOORD4},
+	{ "TEXCOORD5", BGFX_ATTRIB_TEXCOORD5},
+	{ "TEXCOORD6", BGFX_ATTRIB_TEXCOORD6},
+	{ "TEXCOORD7", BGFX_ATTRIB_TEXCOORD7},
 };
 
 struct AttribTypeNamePairs{
@@ -1329,11 +1365,11 @@ struct AttribTypeNamePairs{
 };
 
 static struct AttribTypeNamePairs attrib_type_name_pairs[BGFX_ATTRIB_TYPE_COUNT] = {
-	"UINT8", BGFX_ATTRIB_TYPE_UINT8,
-	"UINT10", BGFX_ATTRIB_TYPE_UINT10,
-	"INT16", BGFX_ATTRIB_TYPE_INT16,
-	"HALF", BGFX_ATTRIB_TYPE_HALF,
-	"FLOAT", BGFX_ATTRIB_TYPE_FLOAT,
+	{"UINT8", BGFX_ATTRIB_TYPE_UINT8},
+	{"UINT10", BGFX_ATTRIB_TYPE_UINT10},
+	{"INT16", BGFX_ATTRIB_TYPE_INT16},
+	{"HALF", BGFX_ATTRIB_TYPE_HALF},
+	{"FLOAT", BGFX_ATTRIB_TYPE_FLOAT},
 };
 
 #define ARRAY_COUNT(_ARRAY) sizeof(_ARRAY) / sizeof(_ARRAY[0])
@@ -1379,6 +1415,21 @@ lexportVertexDecl(lua_State *L) {
 
 	luaL_checktype(L, -1, LUA_TTABLE);
 
+	return 1;
+}
+static inline int
+lvertexDeclStride(lua_State *L) {
+	int type = lua_type(L, 1);
+	if (type != LUA_TUSERDATA) {
+		luaL_error(L, "lvertexDeclStride : invalid input data");
+	}
+	size_t si = lua_rawlen(L, 1);
+	if (sizeof(bgfx_vertex_decl_t) != si) {
+		luaL_error(L, "bad vertex decl input");
+	}
+
+	bgfx_vertex_decl_t *decl = (bgfx_vertex_decl_t*)lua_touserdata(L, 1);
+	lua_pushnumber(L, decl->stride);
 	return 1;
 }
 
@@ -1662,7 +1713,7 @@ extract_buffer_stream(lua_State* L, int idx, int n, struct BufferDataStream *str
 	if (start < 0)
 		start = sz + start + 1;
 
-	stream->data = data + start - 1;
+	stream->data = (const uint8_t *)data + start - 1;
 
 	int end = -1;
 	if (lua_geti(L, idx, n + 2) == LUA_TNUMBER) {
@@ -3884,6 +3935,7 @@ lsetViewMode(lua_State *L) {
 		case 'd': bgfx_set_view_mode(viewid, BGFX_VIEW_MODE_DEPTH_ASCENDING); break;
 		case 'D': bgfx_set_view_mode(viewid, BGFX_VIEW_MODE_DEPTH_DESCENDING); break;
 		case 's': bgfx_set_view_mode(viewid, BGFX_VIEW_MODE_SEQUENTIAL); break;
+		case '\0':bgfx_set_view_mode(viewid, BGFX_VIEW_MODE_DEFAULT); break;
 		default:
 			return luaL_error(L, "Invalid view mode %s", mode);
 		}
@@ -3943,6 +3995,31 @@ lgetScreenshot(lua_State *L) {
 	}
 	ss_free(s);
 	return memptr ? 6 : 5;
+}
+
+static int
+lgetLog(lua_State *L) {
+	struct callback *cb = lua_touserdata(L, -1);
+	struct log_cache *lc = &cb->lc;
+	spin_lock(lc);
+	int offset = lc->head % MAX_LOGBUFFER;
+	int sz = (int)(lc->tail - lc->head);
+
+	int part = MAX_LOGBUFFER - offset;
+
+	if (part >= sz) {
+		// only one part
+		lua_pushlstring(L, lc->log + offset, sz);
+	} else {
+		char tmp[MAX_LOGBUFFER];
+		memcpy(tmp, lc->log + offset, part);
+		memcpy(tmp + part, lc->log, sz - part);
+		lua_pushlstring(L, tmp, sz);
+	}
+	lc->head = lc->tail;
+
+	spin_unlock(lc);
+	return 1;
 }
 
 LUAMOD_API int
@@ -4029,6 +4106,9 @@ luaopen_bgfx(lua_State *L) {
 		{ "request_screenshot", lrequestScreenshot },
 		{ "get_screenshot", lgetScreenshot },
 		{ "export_vertex_decl", lexportVertexDecl },
+		{ "vertex_decl_stride", lvertexDeclStride },
+        { "get_log", lgetLog },		
+
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
