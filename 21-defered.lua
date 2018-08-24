@@ -343,6 +343,7 @@ local function init()
 	ant.init {
 		nwh = iup.GetAttributeData(canvas,"HWND"),
 	}
+
 	-- Enable debug text.
 	bgfx.set_debug "T"
 
@@ -517,7 +518,7 @@ function canvas:resize_cb(w,h)
 	]]
 	ctx.m_gbufferTex[1] = bgfx.create_texture2d(w, h, false, 1, "BGRA8" , samplerFlags)
 	ctx.m_gbufferTex[2] = bgfx.create_texture2d(w, h, false, 1, "BGRA8" , samplerFlags)
-	ctx.m_gbufferTex[3] = bgfx.create_texture2d(w, h, false, 1, "D24"   , samplerFlags)
+	ctx.m_gbufferTex[3] = bgfx.create_texture2d(w, h, false, 1, "D24S8"   , samplerFlags)
 	ctx.m_gbuffer = bgfx.create_frame_buffer(ctx.m_gbufferTex, true)
 
 	bgfx.destroy(ctx.m_lightBuffer)

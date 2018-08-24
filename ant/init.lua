@@ -10,6 +10,7 @@ function ant.init(args)
 	bgfx.set_platform_data(args)
 	bgfx.init {
 		renderer = args.renderer,
+		format = args.format,
 		width = args.width,
 		height = args.height,
 		reset = args.reset,
