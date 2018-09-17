@@ -15,7 +15,7 @@
 #include "luabgfx.h"
 #include "simplelock.h"
 
-#if BGFX_API_VERSION != 79
+#if BGFX_API_VERSION != 81
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -653,7 +653,7 @@ push_texture_formats(lua_State *L, const uint16_t *formats) {
 
 static void
 push_limits(lua_State *L, const bgfx_caps_limits_t *lim) {
-	lua_createtable(L, 0, 22);
+	lua_createtable(L, 0, 23);
 #define PUSH_LIMIT(what) lua_pushinteger(L, lim->what); lua_setfield(L, -2, #what);
 
 	PUSH_LIMIT(maxDrawCalls)
@@ -667,6 +667,7 @@ push_limits(lua_State *L, const bgfx_caps_limits_t *lim) {
 	PUSH_LIMIT(maxShaders)
 	PUSH_LIMIT(maxTextures)
 	PUSH_LIMIT(maxTextureSamplers)
+	PUSH_LIMIT(maxComputeBindings)
 	PUSH_LIMIT(maxVertexDecls)
 	PUSH_LIMIT(maxVertexStreams)
 	PUSH_LIMIT(maxIndexBuffers)
@@ -3904,6 +3905,13 @@ lsetInstanceDataBuffer(lua_State *L) {
 	return 0;
 }
 
+static int
+lsetInstanceCount(lua_State *L) {
+	uint32_t num = luaL_checkinteger(L, 1);
+	bgfx_set_instance_count(num);
+	return 0;
+}
+
 static uint8_t
 dispatch_flags(lua_State *L, int index) {
 	const char * f = lua_tostring(L, index);
@@ -4179,6 +4187,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "dispatch", ldispatch },
 		{ "dispatch_indirect", ldispatchIndirect },
 		{ "set_instance_data_buffer", lsetInstanceDataBuffer },
+		{ "set_instance_count", lsetInstanceCount },
 		{ "submit_indirect", lsubmitIndirect },
 		{ "update", lupdate },
 		{ "get_shader_uniforms", lgetShaderUniforms },
