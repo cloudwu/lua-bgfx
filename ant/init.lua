@@ -17,6 +17,7 @@ function ant.init(args)
 		debug = args.debug,
 		profile = args.profile,
 		getlog = args.getlog,
+		numBackBuffers = args.numBackBuffers,
 		maxFrameLatency = args.maxFrameLatency,
 	}
 	ant.caps = bgfx.get_caps()
