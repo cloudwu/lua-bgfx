@@ -7,7 +7,6 @@ local init_flag
 
 function ant.init(args)
 	assert(init_flag == nil)
-	bgfx.set_platform_data(args)
 	bgfx.init {
 		renderer = args.renderer,
 		format = args.format,
@@ -19,6 +18,13 @@ function ant.init(args)
 		getlog = args.getlog,
 		numBackBuffers = args.numBackBuffers,
 		maxFrameLatency = args.maxFrameLatency,
+
+		-- platform data
+		ndt = args.ndt,
+		nwh = args.nwh,
+		context = args.context,
+		backBuffer = args.backBuffer,
+		backBufferDS = args.backBufferDS,
 	}
 	ant.caps = bgfx.get_caps()
 	init_flag = true
