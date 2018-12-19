@@ -189,15 +189,15 @@ local function init(canvas)
 	end
 
 	-- Set up ID buffer, which has a color target and depth buffer
-	ctx.m_pickingRT = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "RGBA8", "rt-p+p*pucvc")	-- -p:BGFX_TEXTURE_MIN_POINT
-	ctx.m_pickingRTDepth = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "D24S8", "rt-p+p*pucvc")
+	ctx.m_pickingRT = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "RGBA8", "rtapac")	-- -p:BGFX_TEXTURE_MIN_POINT
+	ctx.m_pickingRTDepth = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "D24S8", "rtapac")
 
 	-- CPU texture for blitting to and reading ID buffer so we can see what was clicked on.
 	-- Impossible to read directly from a render target, you *must* blit to a CPU texture
 	-- first. Algorithm Overview: Render on GPU -> Blit to CPU texture -> Read from CPU
 	-- texture.
 
-	ctx.m_blitTex = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "RGBA8", "bwbr-p+p*pucvc")	-- bw:BGFX_TEXTURE_BLIT_DST br:BGFX_TEXTURE_READ_BACK
+	ctx.m_blitTex = bgfx.create_texture2d(ID_DIM, ID_DIM, false, 1, "RGBA8", "bwbrapac")	-- bw:BGFX_TEXTURE_BLIT_DST br:BGFX_TEXTURE_READ_BACK
 
 	ctx.m_pickingFB = bgfx.create_frame_buffer({ctx.m_pickingRT,ctx.m_pickingRTDepth}, true)
 

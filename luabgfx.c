@@ -1762,33 +1762,66 @@ struct BufferDataStream {
 static void 
 extract_buffer_stream(lua_State* L, int idx, int n, struct BufferDataStream *stream) {
 	luaL_checktype(L, idx, LUA_TTABLE);
-	int datatype = lua_geti(L, idx, n);
-	assert(datatype == LUA_TSTRING);
-
-	size_t sz = 0;
-	const char* data = lua_tolstring(L, -1, &sz);
-	lua_pop(L, 1);
-	int start = 1;
-	if (lua_geti(L, idx, n + 1) == LUA_TNUMBER) {
-		start = lua_tointeger(L, -1);
+	const int datatype = lua_geti(L, idx, n);
+	switch ( datatype)
+	{
+	case LUA_TSTRING: {
+		size_t sz = 0;
+		const char* data = lua_tolstring(L, -1, &sz);
 		lua_pop(L, 1);
+		int start = 1;
+		if (lua_geti(L, idx, n + 1) == LUA_TNUMBER) {
+			start = lua_tointeger(L, -1);
+			lua_pop(L, 1);
+		}
+		if (start < 0)
+			start = sz + start + 1;
+
+		stream->data = (const uint8_t *)data + start - 1;
+
+		int end = -1;
+		if (lua_geti(L, idx, n + 2) == LUA_TNUMBER) {
+			end = lua_tointeger(L, -1);
+			lua_pop(L, 1);
+		}
+		if (end < 0)
+			end = sz + end + 1;
+		if (end < start)
+			luaL_error(L, "extract stream data : empty data");
+
+		stream->size = end - start + 1;
+		break;
 	}
-	if (start < 0)
-		start = sz + start + 1;
+	case LUA_TLIGHTUSERDATA:
+	case LUA_TUSERDATA: {
+		const uint8_t * data = lua_touserdata(L, -1);
+		if (lua_geti(L, idx, n + 1) != LUA_TNUMBER) {
+			luaL_error(L, "userdata or light userdata must provided start/end");
+		}
+		const int start = lua_tointeger(L, -1);
+		if (start < 0) {
+			luaL_error(L, "start offset must >= 0, start : %d", start);
+		}
 
-	stream->data = (const uint8_t *)data + start - 1;
+		if (lua_geti(L, idx, n + 2) != LUA_TNUMBER) {
+			luaL_error(L, "userdata or light userdata must provided start/end");
+		}
+		const int end = lua_tointeger(L, -1);
+		if (end < 0) {
+			luaL_error(L, "end offset must > 0, end : %d", end);
+		}
 
-	int end = -1;
-	if (lua_geti(L, idx, n + 2) == LUA_TNUMBER) {
-		end = lua_tointeger(L, -1);
-		lua_pop(L, 1);
+		if (end < start) {
+			luaL_error(L, "end < start, empty data! start : %d, end : %d", start, end);
+		}
+
+		stream->data = data + start - 1;
+		stream->size = end - start + 1;
+		break;
 	}
-	if (end < 0)
-		end = sz + end + 1;
-	if (end < start)
-		luaL_error(L, "extract stream data : empty data");
-
-	stream->size = end - start + 1;
+	default:
+		break;
+	}
 }
 
 static const bgfx_memory_t *
@@ -2967,6 +3000,7 @@ get_texture_flags(lua_State *L, const char *format) {
 		case '-': t = 0x30; break;	// MIN
 		case '+': t = 0x40; break;	// MAG
 		case '*': t = 0x50; break;	// MIP
+		case 'a': t = 0x60; break;	// ALL
 		case 'c':
 			flags |= border_color_or_compare(L, format[i+1]);
 			continue;
@@ -3026,6 +3060,10 @@ get_texture_flags(lua_State *L, const char *format) {
 		case 0x43: flags |= BGFX_SAMPLER_MAG_POINT; break;
 		case 0x44: flags |= BGFX_SAMPLER_MAG_ANISOTROPIC; break;
 		case 0x53: flags |= BGFX_SAMPLER_MIP_POINT; break;
+		case 0x60: flags |= BGFX_SAMPLER_UVW_MIRROR; break;
+		case 0x61: flags |= BGFX_SAMPLER_UVW_CLAMP; break;
+		case 0x62: flags |= BGFX_SAMPLER_UVW_BORDER; break;
+		case 0x63: flags |= BGFX_SAMPLER_POINT; break;
 		default:
 			luaL_error(L, "Invalid texture flags %c%c", format[i], format[i+1]);
 		}
