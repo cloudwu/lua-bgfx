@@ -522,7 +522,7 @@ local function init(canvas)
 	ctx.m_indirectBufferData = bgfx.create_index_buffer(ctx.m_indirectBufferDataCPU, "rd")
 
 	-- create samplers
-	ctx.s_texOcclusionDepthIn = bgfx.create_uniform("s_texOcclusionDepthIn", "i1")
+	ctx.s_texOcclusionDepthIn = bgfx.create_uniform("s_texOcclusionDepthIn", "s")
 
 	ctx.m_OcclusionIB = bgfx.instance_buffer "mvv"
 

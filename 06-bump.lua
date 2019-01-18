@@ -146,8 +146,8 @@ local function init(canvas)
 		},
 		ctx.vdecl , "t" , s_cubeIndices)
 	ctx.ib = bgfx.create_index_buffer(s_cubeIndices)
-	ctx.s_texColor  = bgfx.create_uniform("s_texColor", "i1")
-	ctx.s_texNormal = bgfx.create_uniform("s_texNormal", "i1")
+	ctx.s_texColor  = bgfx.create_uniform("s_texColor", "s")
+	ctx.s_texNormal = bgfx.create_uniform("s_texNormal", "s")
 	ctx.numLights = 4
 	ctx.u_lightPosRadius = bgfx.create_uniform("u_lightPosRadius", "v4", ctx.numLights)
 	ctx.u_lightRgbInnerR = bgfx.create_uniform("u_lightRgbInnerR", "v4", ctx.numLights)

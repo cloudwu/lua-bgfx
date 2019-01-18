@@ -2013,12 +2013,12 @@ local function init(canvas)
 
 	init_Uniforms()
 
-	ctx.s_texColor = bgfx.create_uniform("s_texColor",  "i1")
+	ctx.s_texColor = bgfx.create_uniform("s_texColor",  "s")
 	ctx.s_shadowMap = {
-		bgfx.create_uniform("s_shadowMap0", "i1"),
-		bgfx.create_uniform("s_shadowMap1", "i1"),
-		bgfx.create_uniform("s_shadowMap2", "i1"),
-		bgfx.create_uniform("s_shadowMap3", "i1"),
+		bgfx.create_uniform("s_shadowMap0", "s"),
+		bgfx.create_uniform("s_shadowMap1", "s"),
+		bgfx.create_uniform("s_shadowMap2", "s"),
+		bgfx.create_uniform("s_shadowMap3", "s"),
 	}
 
 	init_Programs()

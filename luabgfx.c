@@ -15,7 +15,7 @@
 #include "luabgfx.h"
 #include "simplelock.h"
 
-#if BGFX_API_VERSION != 92
+#if BGFX_API_VERSION != 93
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -2810,10 +2810,7 @@ lcreateUniform(lua_State *L) {
 	const char * type = luaL_checkstring(L, 2);
 	bgfx_uniform_type_t ut;
 	switch(type[0]) {
-	case 'i':
-		if (type[1] != '1') {
-			return luaL_error(L, "Invalid Uniform type %s", type);
-		}
+	case 's':
 		ut = BGFX_UNIFORM_TYPE_SAMPLER;
 		break;
 	case 'v':
@@ -2855,7 +2852,7 @@ lgetUniformInfo(lua_State *L) {
 	lua_pushstring(L, ut.name);
 	switch (ut.type) {
 	case BGFX_UNIFORM_TYPE_SAMPLER:
-		lua_pushstring(L, "i1");
+		lua_pushstring(L, "s");
 		break;
 	case BGFX_UNIFORM_TYPE_VEC4:
 		lua_pushstring(L, "v4");
@@ -3199,8 +3196,23 @@ lsetName(lua_State *L) {
 		bgfx_set_texture_name(handle, name, sz);
 		break;
 	}
+	case BGFX_HANDLE_VERTEX_BUFFER : {
+		bgfx_vertex_buffer_handle_t handle = { id };
+		bgfx_set_vertex_buffer_name(handle, name, sz);
+		break;
+	}
+	case BGFX_HANDLE_INDEX_BUFFER : {
+		bgfx_index_buffer_handle_t handle = { id };
+		bgfx_set_index_buffer_name(handle, name, sz);
+		break;
+	}
+	case BGFX_HANDLE_FRAME_BUFFER : {
+		bgfx_frame_buffer_handle_t handle = { id };
+		bgfx_set_frame_buffer_name(handle, name, sz);
+		break;
+	}
 	default:
-		return luaL_error(L, "set_name only support shader or texture");
+		return luaL_error(L, "set_name only support shader , texture, vertex/index/frame buffer.");
 	}
 	return 0;
 }

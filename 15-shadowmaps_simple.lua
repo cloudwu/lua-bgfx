@@ -124,7 +124,7 @@ local function init(canvas)
 --	bgfx.set_debug "ST"
 
 	-- Uniforms.
-	ctx.s_shadowMap = bgfx.create_uniform("s_shadowMap", "i1")
+	ctx.s_shadowMap = bgfx.create_uniform("s_shadowMap", "s")
 	ctx.u_lightPos  = bgfx.create_uniform("u_lightPos",  "v4")
 	ctx.u_lightMtx  = bgfx.create_uniform("u_lightMtx",  "m4")
 

@@ -433,7 +433,7 @@ local function init()
 
 	-- Create texture sampler uniforms.
 	local function uni_int(name)
-		ctx[name] = bgfx.create_uniform(name, "i1")
+		ctx[name] = bgfx.create_uniform(name, "s")
 	end
 
 	uni_int "s_texColor"

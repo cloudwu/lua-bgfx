@@ -244,8 +244,8 @@ local function init(canvas)
 	}
 
 	-- Create texture sampler uniforms.
-	ctx.s_texColor0 = bgfx.create_uniform("s_texColor0", "i1")
-	ctx.s_texColor1 = bgfx.create_uniform("s_texColor1", "i1")
+	ctx.s_texColor0 = bgfx.create_uniform("s_texColor0", "s")
+	ctx.s_texColor1 = bgfx.create_uniform("s_texColor1", "s")
 	ctx.u_color     = bgfx.create_uniform("u_color", "v4")
 
 	ctx.m_blend          = util.programLoad("vs_oit",      "fs_oit"                  )

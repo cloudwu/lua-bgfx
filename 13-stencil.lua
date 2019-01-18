@@ -677,7 +677,7 @@ local function init(canvas)
 	}
 
 	init_Uniforms()
-	ctx.s_texColor = bgfx.create_uniform("s_texColor", "i1")
+	ctx.s_texColor = bgfx.create_uniform("s_texColor", "s")
 
 	ctx.m_programTextureLighting = util.programLoad("vs_stencil_texture_lighting", "fs_stencil_texture_lighting")
 	ctx.m_programColorLighting   = util.programLoad("vs_stencil_color_lighting",   "fs_stencil_color_lighting"  )

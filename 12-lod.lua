@@ -148,8 +148,8 @@ local function init(canvas)
 	}
 
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
-	ctx.s_texColor   = bgfx.create_uniform("s_texColor",   "i1")
-	ctx.s_texStipple = bgfx.create_uniform("s_texStipple", "i1")
+	ctx.s_texColor   = bgfx.create_uniform("s_texColor",   "s")
+	ctx.s_texStipple = bgfx.create_uniform("s_texStipple", "s")
 	ctx.u_stipple    = bgfx.create_uniform("u_stipple",    "v4")
 	ctx.m_program = util.programLoad("vs_tree", "fs_tree")
 	ctx.m_textureLeafs = util.textureLoad "textures/leafs1.dds"
