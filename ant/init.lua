@@ -1,3 +1,4 @@
+local iup = require "iuplua"
 local bgfx = require "bgfx"
 local framework = require "ant.framework"
 
