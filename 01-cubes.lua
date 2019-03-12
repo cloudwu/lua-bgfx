@@ -77,7 +77,7 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
 	-- calc lookat matrix, return matrix pointer, and remove top
-	local viewmat = ms({0,0,-35,1}, {0, 0, 0, 1}, "lm")
+	local viewmat = ms({0,0,-35}, {0, 0, 0}, "lm")
 	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
 	bgfx.set_view_transform(0, viewmat, projmat)
 end

@@ -1,37 +1,41 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "05-instancing",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
 
-local ctx = {}
+local ms = math3d.new()
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "05-instancing",
+	size = "HALFxHALF",
+}
 
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.01
 	ctx.idb:alloc(121)
-	local mtx = math3d.matrix()
-	local color = math3d.vector()
 
 	local i = 0
 	for yy=0,10 do
 		for xx=0,10 do
-			mtx:rotmat(time + xx* 0.21 , time + yy * 0.37)
-			mtx:packline(4, -15.0 + xx*3.0, -15.0 + yy*3.0, 0.0)
-			color:pack(
+			local mtx = ms( { type = "srt",
+				r = { time + xx* 0.21 , time + yy * 0.37, 0 },
+				t = { -15.0 + xx*3.0, -15.0 + yy*3.0, 0.0 },
+			} , "m")
+			local color = ms( {
 				math.sin(time+xx/11)*0.5+0.5,
 				math.cos(time+yy/11)*0.5+0.5,
 				math.sin(time*3.0)*0.5+0.5
-			)
+				}, "m")
 			ctx.idb(i, mtx, color)
 			i = i + 1
 		end
@@ -51,10 +55,8 @@ local function notsupported()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_instancing", "fs_instancing")
 	ctx.vdecl = bgfx.vertex_decl {
@@ -89,48 +91,29 @@ local function init(canvas)
 	}
 	ctx.idb = bgfx.instance_buffer "mv"	-- 64 bytes for 4x4 matrix + 16 bytes for RGBA color
 
-	if ant.caps.supported.INSTANCING then
-		ant.mainloop(mainloop)
-	else
+	if not util.caps.supported.INSTANCING then
 		bgfx.set_debug "T"
-		ant.mainloop(notsupported)
+		mainloop = notsupported
 	end
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 0.0, -35.0, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	local viewmat = ms( { 0.0, 0.0, -35.0 }, {  0,0,0 }, "lm")
+	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 end
 
-function canvas:action(x,y)
-	if ant.caps.supported.INSTANCING then
-		mainloop()
-	else
-		notsupported()
-	end
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
+util.run(mainloop)
 
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.prog)
-  bgfx.destroy(ctx.ib)
-  bgfx.destroy(ctx.vb)
-  ant.shutdown()
-end
+--  bgfx.destroy(ctx.prog)
+--  bgfx.destroy(ctx.ib)
+--  bgfx.destroy(ctx.vb)
