@@ -83,7 +83,7 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 	bgfx.reset(w,h, "v")
 
-	ms(ctx.viewmat, {0,0,-15,1}, {0, 0, 0, 1}, "l=")
+	ms(ctx.viewmat, {0,0,-15}, {0, 0, 0}, "l=")
 	ms(ctx.projmat, { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "=")
 	bgfx.set_view_transform(0, ~ctx.viewmat, ~ctx.projmat)
 	local orthomat = ms("#", { type = "mat", ortho = true, l = 0.0, r= 1280.0, b = 720.0, t = 0.0, n = 0.0, f = 100.0 }, "m")

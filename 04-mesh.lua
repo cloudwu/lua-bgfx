@@ -32,7 +32,6 @@ end
 
 function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_mesh", "fs_mesh")
 	ctx.mesh = util.meshLoad "meshes/bunny.bin"
@@ -50,7 +49,7 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	local viewmat = ms( {0,1,-2.5,1}, {0,1,0, 1}, "lm")
+	local viewmat = ms( {0,1,-2.5}, {0,1,0}, "lm")
 	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
 
 	bgfx.set_view_transform(0, viewmat, projmat)
