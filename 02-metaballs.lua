@@ -1,14 +1,20 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas{}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
-dlg = iup.dialog {
-  canvas,
-  title = "02-metaballs",
-  size = "HALFxHALF",
+local ms = math3d.new()
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "02-metaballs",
+	size = "HALFxHALF",
 }
 
 local s_edges = {
@@ -413,15 +419,13 @@ end
 
 local DIMS = 32
 
-local ctx = {}
-
 local ypitch = DIMS
 local zpitch = DIMS*DIMS
 local invdim = 1/(DIMS-1)
 
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.01
 	local numVertices = 0
@@ -520,8 +524,11 @@ local function mainloop()
 		end
 	end
 
-	local mat = math3d.matrix()
-	mat:rotmat(time*0.67, time)
+	local mat = ms (
+		{ type = "srt",
+			r = { time * 0.67, time, 0 },	-- rot degree
+		},  "m")
+
 	bgfx.set_transform(mat)
 	ctx.tvb:setV(0, 0, numVertices)
 	bgfx.set_state()	-- default state
@@ -530,10 +537,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-	}
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 --	bgfx.set_debug "ST"
 
@@ -549,34 +553,19 @@ local function init(canvas)
 	for i = 1, DIMS^3 do
 		grid[i] = { 0, 0, 0}
 	end
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.reset(w,h, "vmx")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,0,-50, 0,0,0)
-	projmat:projmat(60, w/h, 0.1, 100)
+
+	local viewmat = ms({0,0,-50,1}, {0, 0, 0, 1}, "lm")
+	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.prog)
-  ant.shutdown()
-end
+util.run(mainloop)

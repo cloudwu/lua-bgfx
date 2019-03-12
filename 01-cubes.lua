@@ -5,12 +5,6 @@ local bgfx = require "bgfx"
 local util = require "util"
 local math3d = require "math3d"
 
---local ant = require "ant"
---local util = require "ant.util"
---local common = require "ant.common"
---local math3d = require "ant.math"
---local bgfx = require "bgfx"
-
 local ctx = {
 --	renderer = "OPENGL",
 	canvas = iup.canvas{
@@ -32,12 +26,10 @@ local function mainloop()
 	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.001
-	local scale = ms:vector(1,1,1)
 	for yy = 0, 10 do
 		for xx = 0, 10 do
 			local mat = ms (
 				{ type = "srt",
-					s = scale,
 					r = { time + xx*0.21, time + yy*0.37, 0 },	-- rot degree
 					t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 }   -- trans
 				},  "m")
