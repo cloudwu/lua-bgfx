@@ -9,12 +9,7 @@ CC= gcc
 CXX = g++
 CFLAGS = -g -Wall
 
-# math3d
-
-all : math3d.dll
-
-math3d.dll : libmath.c
-	$(CC) $(CFLAGS) --shared -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(LUALIB)
+all :
 
 # bgfx
 #BGFXVER = Debug
@@ -33,10 +28,10 @@ $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
 $(ODIR)/luabgfxutil.o : luabgfxutil.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
 
-bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/ibcompress.o $(ODIR)/luabgfxutil.o
+bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/ibcompress.o $(ODIR)/luabgfxutil.o
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
-all : bgfx.dll
+all : bin/bgfx.dll
 
 # all
 

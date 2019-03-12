@@ -1,33 +1,46 @@
-local ant = require "ant"
-local util = require "ant.util"
-local common = require "ant.common"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas{
---	rastersize = "1024x768",
---	rastersize = "400x300",
+--local ant = require "ant"
+--local util = require "ant.util"
+--local common = require "ant.common"
+--local math3d = require "ant.math"
+--local bgfx = require "bgfx"
+
+local ctx = {
+--	renderer = "OPENGL",
+	canvas = iup.canvas{
+	--	rastersize = "1024x768",
+	--	rastersize = "400x300",
+	},
 }
 
-canvas.keypress_cb = common.keypress_cb
+local ms = math3d.new()	-- new a math stack object
 
-dlg = iup.dialog {
-  canvas,
-  title = "01-cubes",
-  size = "HALFxHALF",
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "01-cubes",
+	size = "HALFxHALF",
 }
 
-local ctx = {}
 local time = 0
 local function mainloop()
-	common.save_screenshot "screenshot.ppm"
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
-	local mat = math3d.matrix()
 	time = time + 0.001
+	local scale = ms:vector(1,1,1)
 	for yy = 0, 10 do
 		for xx = 0, 10 do
-			mat:rotmat(time + xx*0.21, time + yy*0.37):trans(-15.0 + xx * 3, -15.0 + yy * 3, 0)
+			local mat = ms (
+				{ type = "srt",
+					s = scale,
+					r = { time + xx*0.21, time + yy*0.37, 0 },	-- rot degree
+					t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 }   -- trans
+				},  "m")
 			bgfx.set_transform(mat)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -39,14 +52,8 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
---		renderer = "DIRECT3D9",
-		renderer = "OPENGL",
-	}
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_cubes", "fs_cubes")
 
@@ -70,38 +77,26 @@ local function init(canvas)
 	ctx.ib = bgfx.create_index_buffer{
 		0, 1, 2, 3, 7, 1, 5, 0, 4, 2, 6, 7, 4, 5,
 	}
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,0,-35, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	-- calc lookat matrix, return matrix pointer, and remove top
+	local viewmat = ms({0,0,-35,1}, {0, 0, 0, 1}, "lm")
+	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
 
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
+util.run(mainloop)
 
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.vb)
-  bgfx.destroy(ctx.ib)
-  bgfx.destroy(ctx.prog)
-  ant.shutdown()
-end
+-- util.run will call bgfx.shutdown to destroy everything, so don't call these:
+--bgfx.destroy(ctx.vb)
+--bgfx.destroy(ctx.ib)
+--bgfx.destroy(ctx.prog)

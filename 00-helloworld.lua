@@ -1,5 +1,8 @@
-local ant = require "ant"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
 
 local s_logo = "\z
 	\xdc\x03\xdc\x03\xdc\x03\xdc\x03\x20\x0f\x20\x0f\x20\x0f\x20\x0f\z
@@ -254,15 +257,29 @@ local s_logo = "\z
 	\x20\x0f\x20\x0f\x20\x0f\x20\x0f\x20\x0f\x20\x0f\x20\x0f\x20\x0f\z
 "
 
-canvas = iup.canvas{}
-
-dlg = iup.dialog {
-  canvas,
-  title = "01-helloworld",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas{},
+	stats = {},
 }
 
-local ctx = { stats = {} }
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "01-helloworld",
+	size = "HALFxHALF",
+}
+
+function ctx.init()
+	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
+	bgfx.set_debug "T"
+end
+
+function ctx.resize(w,h)
+	bgfx.set_view_rect(0, 0, 0, w, h)
+	bgfx.reset(w,h, "v")
+	ctx.width = w
+	ctx.height = h
+end
+
 local function mainloop()
 	bgfx.touch(0)
 
@@ -286,40 +303,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas, width, height, reset)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-		width = width,
-		height = height,
-		reset = reset,
-	}
-	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
-	bgfx.set_debug "T"
-
-	ant.mainloop(mainloop)
-end
-
-function canvas:resize_cb(w,h)
-	if init then
-		init(self,w,h,"v")
-		init = nil
-	end
-	bgfx.set_view_rect(0, 0, 0, w, h)
-	bgfx.reset(w,h, "v")
-	ctx.width = w
-	ctx.height = h
-end
-
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-	iup.MainLoop()
-	iup.Close()
-	ant.shutdown()
-end
+util.run(mainloop)
