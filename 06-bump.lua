@@ -1,36 +1,39 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
 local bgfxu = require "bgfx.util"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "06-bump",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
 
-local ctx = {}
+local ms = math3d.new()
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "06-bump",
+	size = "HALFxHALF",
+}
 
 local time = 0
 
 local function setlight()
+	local light = {}
 	for i=1,ctx.numLights do
-		math3d.vector(i, ctx.light):pack(
-			math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
+		light[i] = { math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
 			math.cos(time*(0.2+i*0.29) + i * math.pi * 1.49) * 3,
-			-2.5,
-			3
-		)
+			-2.5, 3 }
 	end
-	bgfx.set_uniform(ctx.u_lightPosRadius, table.unpack(ctx.light))
+
+	bgfx.set_uniform(ctx.u_lightPosRadius, table.unpack(light))
 	bgfx.set_uniform(ctx.u_lightRgbInnerR, table.unpack(ctx.lightRgbInnerR))
 end
 
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.01
 
@@ -39,8 +42,9 @@ local function mainloop()
 	local mtx = math3d.matrix()
 	for yy=0,2 do
 		for xx=0,2 do
-			mtx:rotmat(time*0.023 + xx*0.21, time*0.03 + yy*0.37)
-			mtx:packline(4, -3+xx*3, -3+yy*3, 0)
+			local mtx = ms( { type = "srt",
+				r = { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },
+				t = { -3+xx*3, -3+yy*3, 0 } }, "m")
 			bgfx.set_transform(mtx)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -54,19 +58,18 @@ local function mainloop()
 end
 
 local function mainloop_instancing()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.01
 
 	setlight()
 
-	local mtx = math3d.matrix()
-
 	ctx.idb:alloc(9)
 	for yy= 0,2 do
 		for xx=0,2 do
-			mtx:rotmat(time*0.023 + xx*0.21, time*0.03 + yy*0.37)
-			mtx:packline(4, -3+xx*3, -3+yy*3, 0)
+			local mtx = ms( { type = "srt",
+				r = { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },
+				t = { -3+xx*3, -3+yy*3, 0 }}, "m")
 			ctx.idb(yy*3+xx, mtx)
 		end
 	end
@@ -81,10 +84,9 @@ local function mainloop_instancing()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
+
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 4, "UINT8", true, true },
@@ -154,68 +156,45 @@ local function init(canvas)
 	ctx.textureColor = util.textureLoad "textures/fieldstone-rgba.dds"
 	ctx.textureNormal = util.textureLoad "textures/fieldstone-n.dds"
 
-	ctx.light = {}
-	for i=1,ctx.numLights do
-		math3d.vector(i, ctx.light)
-	end
+	ctx.lightRgbInnerR = {
+		{ 1.0, 0.7, 0.2, 0.8 },
+		{ 0.7, 0.2, 1.0, 0.8 },
+		{ 0.2, 1.0, 0.7, 0.8 },
+		{ 1.0, 0.4, 0.2, 0.8 },
+	}
 
-	ctx.lightRgbInnerR = {}
-	math3d.vector(1, ctx.lightRgbInnerR):pack(1.0, 0.7, 0.2, 0.8)
-	math3d.vector(2, ctx.lightRgbInnerR):pack(0.7, 0.2, 1.0, 0.8)
-	math3d.vector(3, ctx.lightRgbInnerR):pack(0.2, 1.0, 0.7, 0.8)
-	math3d.vector(4, ctx.lightRgbInnerR):pack(1.0, 0.4, 0.2, 0.8)
-
-	if ant.caps.supported.INSTANCING then
+	if util.caps.supported.INSTANCING then
 		ctx.prog = util.programLoad("vs_bump_instanced", "fs_bump")
 		ctx.idb = bgfx.instance_buffer "m"
-		ant.mainloop(mainloop_instancing)
+		mainloop = mainloop_instancing
 	else
 		ctx.prog = util.programLoad("vs_bump", "fs_bump")
-		ant.mainloop(mainloop)
 	end
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 0.0, -7.0, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	local viewmat = ms( { 0.0, 0.0, -7.0 }, {  0,0,0 }, "lm")
+	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 end
 
-function canvas:action(x,y)
-	if ant.caps.supported.INSTANCING then
-		mainloop_instancing()
-	else
-		mainloop()
-	end
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
+util.run(mainloop)
 
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.prog)
-  bgfx.destroy(ctx.ib)
-  bgfx.destroy(ctx.vb)
-  bgfx.destroy(ctx.s_texColor)
-  bgfx.destroy(ctx.s_texNormal)
-  bgfx.destroy(ctx.u_lightPosRadius)
-  bgfx.destroy(ctx.u_lightRgbInnerR)
-  bgfx.destroy(ctx.textureColor)
-  bgfx.destroy(ctx.textureNormal)
-
-  ant.shutdown()
-end
+-- bgfx.destroy(ctx.prog)
+-- bgfx.destroy(ctx.ib)
+-- bgfx.destroy(ctx.vb)
+-- bgfx.destroy(ctx.s_texColor)
+-- bgfx.destroy(ctx.s_texNormal)
+-- bgfx.destroy(ctx.u_lightPosRadius)
+-- bgfx.destroy(ctx.u_lightRgbInnerR)
+-- bgfx.destroy(ctx.textureColor)
+-- bgfx.destroy(ctx.textureNormal)
