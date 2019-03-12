@@ -1,18 +1,21 @@
+package.cpath = "bin/?.dll"
+
 local iup = require "iuplua"
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "03-raymarch",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
 
-local ctx = {}
+local ms = math3d.new()
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "03-raymarch",
+	size = "HALFxHALF",
+}
 
 local index = { 0,2,1,0,3,2 }
 
@@ -39,18 +42,17 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.01
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	local vp = math3d.matrix():mul(viewmat, projmat)
-	local mtx = math3d.matrix():rotmat(time, time * 0.37)
-	local mtxInv = math3d.matrix():inverted(mtx)
-	local lightDirTime = math3d.vector():pack(-0.4, -0.5, -1.0, 0):normalize():vec4mul(mtxInv):pack(nil,nil,nil,time)
+
+	local vp = ms(ctx.projmat, ctx.viewmat, "*P")
+	local mtx = ms ( { type = "srt", r = { time , time * 0.37, 0 }	}, "P" )
+	local lightDirTime = ms(mtx, "i", {-0.4, -0.5, -1.0, 0} , "n*T")
+	lightDirTime[4] = time
 
 	bgfx.set_uniform(ctx.u_lightDirTime, lightDirTime)
-	local invMvp = math3d.matrix():mul(mtx,vp):inverted()
+	local invMvp = ms(vp, mtx,"*im")
 	bgfx.set_uniform(ctx.u_mtx, invMvp)
 
 	renderScreenSpaceQuad(0.0, 0.0, 1280.0, 720.0)
@@ -58,10 +60,8 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_raymarching", "fs_raymarching")
 	ctx.vdecl = bgfx.vertex_decl {
@@ -72,41 +72,29 @@ local function init(canvas)
 	ctx.u_mtx = bgfx.create_uniform("u_mtx", "m4")
 	ctx.u_lightDirTime = bgfx.create_uniform("u_lightDirTime", "v4")
 	ctx.tb = bgfx.transient_buffer "fffdff"
-
-	ant.mainloop(mainloop)
+	ctx.viewmat = math3d.ref "matrix"
+	ctx.projmat = math3d.ref "matrix"
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 	bgfx.reset(w,h, "v")
 
-	local viewmat = math3d.matrix("view"):lookatp( 0,0,-15, 0,0,0)
-	local projmat = math3d.matrix("proj"):projmat(60, ctx.width/ctx.height, 0.1, 100)
-	bgfx.set_view_transform(0, viewmat, projmat)
-	local orthomat = math3d.matrix("ortho"):orthomat(0.0, 1280.0, 720.0, 0.0, 0.0, 100.0)
+	ms(ctx.viewmat, {0,0,-15,1}, {0, 0, 0, 1}, "l=")
+	ms(ctx.projmat, { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "=")
+	bgfx.set_view_transform(0, ~ctx.viewmat, ~ctx.projmat)
+	local orthomat = ms("#", { type = "mat", ortho = true, l = 0.0, r= 1280.0, b = 720.0, t = 0.0, n = 0.0, f = 100.0 }, "m")
 	bgfx.set_view_transform(1, nil, orthomat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
+util.run(mainloop)
 
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.prog)
-  bgfx.destroy(ctx.u_mtx)
-  bgfx.destroy(ctx.u_lightDirTime)
-  ant.shutdown()
-end
+--bgfx.destroy(ctx.prog)
+--bgfx.destroy(ctx.u_mtx)
+--bgfx.destroy(ctx.u_lightDirTime)
