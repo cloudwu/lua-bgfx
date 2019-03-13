@@ -349,8 +349,7 @@ function ctx.init()
 		ctx.m_rb = bgfx.create_texture2d(1, 1, false, 1, "BGRA8", "br") -- BGFX_TEXTURE_READ_BACK
 	end
 
-	ctx.ortho = math3d.ref "matrix"
-	ms(ctx.ortho , { type = "mat", ortho = true, l = 0, r= 1, b = 1, t = 0, n = 100, f = 0 } , "=")
+	ctx.ortho = ms:ref "matrix" { type = "mat", ortho = true, l = 0, r= 1, b = 1, t = 0, n = 100, f = 0 }
 	ctx.m_fbtextures = {}
 
 	ctx.lumAvg_data = bgfx.memory_texture(4)
@@ -371,8 +370,7 @@ function ctx.resize(w,h)
 	fbtextures[2] = bgfx.create_texture2d(ctx.width, ctx.height, false, 1, depthFormat, textureFlags)
 
 	ctx.m_fbh = bgfx.create_frame_buffer(fbtextures, true)
-	ctx.proj = math3d.ref "matrix"
-	ms(ctx.proj, { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "=")
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }
 end
 
 util.init(ctx)
