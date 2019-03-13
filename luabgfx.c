@@ -14,7 +14,7 @@
 #include "luabgfx.h"
 #include "simplelock.h"
 
-#if BGFX_API_VERSION != 96
+#if BGFX_API_VERSION != 97
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -246,7 +246,7 @@ cb_screen_shot(bgfx_callback_interface_t *self, const char* file, uint32_t width
 	s->height = height;
 	s->pitch = pitch;
 	s->size = size;
-	uint8_t * dst = (uint8_t *)s->data;
+	uint8_t * dst = s->data;
 	const uint8_t * src = (const uint8_t *)data;
 	int line_pitch = pitch;
 	if (yflip) {
@@ -2617,7 +2617,7 @@ lpackTVB(lua_State *L) {
 		return luaL_error(L, "Transient vb index out of range %d/%d", idx, v->cap_v);
 	}
 	int stride = v->tvb.stride;
-	uint8_t * data = (uint8_t *)v->tvb.data + stride * idx;
+	uint8_t * data = v->tvb.data + stride * idx;
 	int i;
 	int offset = 0;
 	for (i=0;v->format[i];i++) {
