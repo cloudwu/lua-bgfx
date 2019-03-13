@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local settings = {
 	speed = 0.37,
@@ -34,7 +36,10 @@ local function slider(name, title, min, max)
 	return s
 end
 
-local canvas = iup.canvas {}
+local ctx = {
+	canvas = iup.canvas {},
+}
+
 local lumAvgLabel = iup.label { SIZE = "100x" } -- { expand="HORIZONTAL" }
 
 local function update_lumarg()
@@ -58,19 +63,20 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-dlg = iup.dialog {
+local ms = math3d.new()
+
+local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
 			ctrl,
 			margin = "10x10",
 		},
-		canvas,
+		ctx.canvas,
 	},
-  title = "09-hdr",
-  size = "HALFxHALF",
+	title = "09-hdr",
+	size = "HALFxHALF",
 }
 
-local ctx = {}
 local view_order = { 0,1,2,3,4,5,6,7,8,9 }
 
 local function shuffle()
@@ -120,7 +126,7 @@ local function setOffsets2x2Lum(handle, width, height)
 	for yy = 0, 2 do
 		for xx = 0, 2 do
 			num = num + 1
-			local v = math3d.vector(num,offsets):pack((xx - h) * du,(yy - h) * dv)
+			offsets[num] = { (xx - h) * du,(yy - h) * dv , 0, 0 }
 		end
 	end
 
@@ -135,7 +141,7 @@ local function setOffsets4x4Lum(handle, width, height)
 	for yy = 0, 3 do
 		for xx = 0, 3 do
 			num = num + 1
-			local v = math3d.vector(num,offsets):pack((xx - 1 - h) * du,(yy - 1 - h) * dv)
+			offsets[num] = { (xx - 1 - h) * du,(yy - 1 - h) * dv, 0, 0 }
 		end
 	end
 
@@ -144,7 +150,7 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + 0.02 * settings.speed
 	shuffle()
@@ -195,15 +201,13 @@ local function mainloop()
 	bgfx.set_view_order(view_order)
 
 	for i=0,#view_order-1 do
-		bgfx.set_view_transform(i, nil, ctx.ortho)
+		bgfx.set_view_transform(i, nil, ~ctx.ortho)
 	end
 
-	local mtx = math3d.matrix():rotmat(0, time)
-	local eye = math3d.vector():pack(0,1,-2.5):mul(mtx)
-	local at = math3d.vector():pack(0,1,0)
-	local view = math3d.matrix():lookat(eye, at)
+	local mtx = ms( { type = "srt",	r = { 0, time, 0 } } , "1m" )	-- mtx on stack
+	local view = ms( { 0,1,-2.5 } , "*" , { 0,1,0 }, "lm")
 
-	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
+	bgfx.set_view_transform(hdrMesh, view, ~ctx.proj)
 
 	-- Render skybox into view hdrSkybox.
 	bgfx.set_texture(0, ctx.s_texCube, ctx.m_uffizi)
@@ -212,13 +216,8 @@ local function mainloop()
 	screenSpaceQuad( ctx.width, ctx.height, true)
 	bgfx.submit(hdrSkybox, ctx.m_skyProgram)
 
-	local tonemap = math3d.vector():pack(
-		settings.middleGray,
-		settings.white ^ 2,
-		settings.threshold,
-		time
-	)
-	local originBottomLeft = ant.caps.originBottomLeft
+	local tonemap = ms ( { settings.middleGray,	settings.white ^ 2,	settings.threshold,	time }, "m")
+	local originBottomLeft = util.caps.originBottomLeft
 
 	-- Render m_mesh into view hdrMesh.
 	bgfx.set_texture(0, ctx.s_texCube, ctx.m_uffizi)
@@ -295,9 +294,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
---	bgfx.set_debug "ST"
+function ctx.init()
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION",  3, "FLOAT" },
 		{ "COLOR0",    4, "UINT8", true },
@@ -335,7 +332,7 @@ local function init(canvas)
 	ctx.m_mesh = util.meshLoad "meshes/bunny.bin"
 	ctx.m_fbh = nil -- frame buffer
 
-	ctx.s_texelHalf = ant.caps.rendererType == "DIRECT3D9" and 0.5 or 0
+	ctx.s_texelHalf = util.caps.rendererType == "DIRECT3D9" and 0.5 or 0
 
 	ctx.m_lum = {
 		bgfx.create_frame_buffer(128, 128, "BGRA8"),
@@ -348,23 +345,18 @@ local function init(canvas)
 	ctx.m_bright = bgfx.create_frame_buffer("1/2", "BGRA8")
 	ctx.m_blur   = bgfx.create_frame_buffer("1/8", "BGRA8")
 
-	if ant.caps.supported.TEXTURE_BLIT and ant.caps.supported.TEXTURE_READ_BACK then
+	if util.caps.supported.TEXTURE_BLIT and util.caps.supported.TEXTURE_READ_BACK then
 		ctx.m_rb = bgfx.create_texture2d(1, 1, false, 1, "BGRA8", "br") -- BGFX_TEXTURE_READ_BACK
 	end
 
-	ctx.ortho = math3d.matrix("ortho"):orthomat(0,1,1,0,0,100,0)
+	ctx.ortho = math3d.ref "matrix"
+	ms(ctx.ortho , { type = "mat", ortho = true, l = 0, r= 1, b = 1, t = 0, n = 100, f = 0 } , "=")
 	ctx.m_fbtextures = {}
 
 	ctx.lumAvg_data = bgfx.memory_texture(4)
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
@@ -379,20 +371,11 @@ function canvas:resize_cb(w,h)
 	fbtextures[2] = bgfx.create_texture2d(ctx.width, ctx.height, false, 1, depthFormat, textureFlags)
 
 	ctx.m_fbh = bgfx.create_frame_buffer(fbtextures, true)
-	ctx.proj = math3d.matrix("proj"):projmat(60, ctx.width/ctx.height, 0.1, 100)
+	ctx.proj = math3d.ref "matrix"
+	ms(ctx.proj, { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "=")
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)
