@@ -1,9 +1,14 @@
+package.cpath = "bin/?.dll"
+
 local iup = require "iuplua"
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
 local bgfx = require "bgfx"
 local bgfxu = require "bgfx.util"
+local util = require "util"
+local math3d = require "math3d"
+
+local ctx = {
+	canvas = iup.canvas {},
+}
 
 local settings = {
 	numLights = 512,
@@ -60,8 +65,6 @@ local function checkbox(key, title, func)
 	}
 end
 
-local canvas = iup.canvas {}
-
 local ctrl = iup.frame {
 	iup.vbox {
 		slider("numLights", "Num lights", 1, 2048),
@@ -73,13 +76,13 @@ local ctrl = iup.frame {
 	title = "Settings",
 }
 
-dlg = iup.dialog {
+local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
 			ctrl,
 			margin = "10x10",
 		},
-		canvas,
+		ctx.canvas,
 	},
   title = "21-defered",
   size = "HALFxHALF",
@@ -90,8 +93,6 @@ local RENDER_PASS_LIGHT_ID         = 1
 local RENDER_PASS_COMBINE_ID       = 2
 local RENDER_PASS_DEBUG_LIGHTS_ID  = 3
 local RENDER_PASS_DEBUG_GBUFFER_ID = 4
-
-local ctx = {}
 
 local function screenSpaceQuad(textureWidth, textureHeight, texelHalf, originBottomLeft)
 	local width = 1
@@ -126,7 +127,7 @@ local function screenSpaceQuad(textureWidth, textureHeight, texelHalf, originBot
 	ctx.screen_tb:set()
 end
 
-local box = {} ; for i = 1,8 do math3d.vector(i, box) end
+local box = {}
 
 local ScissorRect_index = {0,1,1,2,2,3,3,0}
 local ScissorRect_state = bgfx.make_state {
@@ -135,36 +136,31 @@ local ScissorRect_state = bgfx.make_state {
 					BLEND = "ALPHA"
 				}
 
+local ms = math3d.new()
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	time = time + settings.lightAnimationSpeed * 0.1
-	local view = math3d.matrix "view"
-	local proj = math3d.matrix "proj"
 
 	-- Setup views
-	local vp = math3d.matrix()
-	local invMvp = math3d.matrix()
+	local vp
 	do
 		bgfx.set_view_frame_buffer(RENDER_PASS_LIGHT_ID, ctx.m_lightBuffer)
 		bgfx.set_view_frame_buffer(RENDER_PASS_GEOMETRY_ID, ctx.m_gbuffer)
 
-		bgfx.set_view_transform(RENDER_PASS_GEOMETRY_ID, view, proj)
+		bgfx.set_view_transform(RENDER_PASS_GEOMETRY_ID, ~ctx.view, ~ctx.proj)
 
-		vp:mul(view, proj)
-		invMvp:copy(vp):inverted()
+		vp = ms(ctx.proj, ctx.view, "*P")
 
-		local ortho = math3d.matrix "ortho"
-		bgfx.set_view_transform(RENDER_PASS_LIGHT_ID, nil, ortho)
-		bgfx.set_view_transform(RENDER_PASS_COMBINE_ID, nil, ortho)
+		bgfx.set_view_transform(RENDER_PASS_LIGHT_ID, nil, ~ctx.ortho)
+		bgfx.set_view_transform(RENDER_PASS_COMBINE_ID, nil, ~ctx.ortho)
 
-		local o = math3d.matrix "ortho2"
 		local size = 10
 		local aspectRatio = ctx.height / ctx.width
-		o:orthomat(-size, size, size * aspectRatio, -size * aspectRatio, 0, 1000)
+		local o = ms( { type = "mat", ortho = true, l = -size, r = size, b = size * aspectRatio, t = -size * aspectRatio, n = 0, f = 1000 }, "m")
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_GBUFFER_ID, nil, o)
 
-		o:orthomat(0, ctx.width, 0, ctx.height, 0, 1000)
+		local o = ms( { type = "mat", ortho = true, l = 0, r = ctx.width, b = 0, t = ctx.height, n = 0, f = 1000 }, "m")
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_LIGHTS_ID, nil, o)
 	end
 
@@ -172,17 +168,15 @@ local function mainloop()
 	local offset = ((dim-1) * 3) * 0.5
 
 	-- Draw into geometry pass.
-	local mtx = math3d.matrix()
 	for yy = 0, dim-1 do
 		for xx = 0, dim-1 do
+			local srt = { type = "srt" }
 			if settings.animateMesh then
-				mtx:rotmat(time * 1.023 + xx*0.21, time*0.03 + yy* 0.37)
-			else
-				mtx:identity()
+				srt.r = { time * 1.023 + xx*0.21, time*0.03 + yy* 0.37, 0 }
 			end
-			mtx:packline(4,  -offset + xx * 3, -offset + yy * 3, 0)
+			srt.t = { -offset + xx * 3, -offset + yy * 3, 0 }
 			-- Set transform for draw call.
-			bgfx.set_transform(mtx)
+			bgfx.set_transform(ms (srt , "m"))
 
 			-- Set vertex and index buffer.
 			bgfx.set_vertex_buffer(ctx.m_vbh)
@@ -199,6 +193,7 @@ local function mainloop()
 			bgfx.submit(RENDER_PASS_GEOMETRY_ID, ctx.m_geomProgram)
 		end
 	end
+
 
 	-- Draw lights into light buffer.
 	for light = 0, settings.numLights-1 do
@@ -220,26 +215,25 @@ local function mainloop()
 			lightPosRadius[3] + lightPosRadius.radius,
 		}
 
-		box[1]:pack(aabb_min[1], aabb_min[2], aabb_min[3])
-		box[2]:pack(aabb_min[1], aabb_min[2], aabb_max[3])
-		box[3]:pack(aabb_min[1], aabb_max[2], aabb_min[3])
-		box[4]:pack(aabb_min[1], aabb_max[2], aabb_max[3])
-		box[5]:pack(aabb_max[1], aabb_min[2], aabb_min[3])
-		box[6]:pack(aabb_max[1], aabb_min[2], aabb_max[3])
-		box[7]:pack(aabb_max[1], aabb_max[2], aabb_min[3])
-		box[8]:pack(aabb_max[1], aabb_max[2], aabb_max[3])
+		box[1] = { aabb_min[1], aabb_min[2], aabb_min[3] , 1}
+		box[2] = { aabb_min[1], aabb_min[2], aabb_max[3] , 1}
+		box[3] = { aabb_min[1], aabb_max[2], aabb_min[3] , 1}
+		box[4] = { aabb_min[1], aabb_max[2], aabb_max[3] , 1}
+		box[5] = { aabb_max[1], aabb_min[2], aabb_min[3] , 1}
+		box[6] = { aabb_max[1], aabb_min[2], aabb_max[3] , 1}
+		box[7] = { aabb_max[1], aabb_max[2], aabb_min[3] , 1}
+		box[8] = { aabb_max[1], aabb_max[2], aabb_max[3] , 1}
 
-		local xyz = math3d.vector()
-		xyz:mulH(box[1], vp)
+		local xyz = ms (box[1], vp, "%T" )
 
-		local maxx, maxy, maxz = xyz:unpack()
+		local maxx, maxy, maxz = xyz[1], xyz[2], xyz[3]
 
 		local minx = maxx
 		local miny = maxy
 
 		for i=2,8 do
-			xyz:mulH(box[i], vp)
-			local x,y,z = xyz:unpack()
+			xyz = ms(box[i], vp, "%T" )
+			local x,y,z = xyz[1], xyz[2], xyz[3]
 			minx = math.min(minx, x)
 			miny = math.min(miny, y)
 			maxx = math.max(maxx, x)
@@ -282,26 +276,26 @@ local function mainloop()
 			end
 
 			local val = light & 7
-			local lightRgbInnerR = math3d.vector():pack(
+			local lightRgbInnerR = {
 				(val & 0x1) ~= 0 and 1 or 0.25,
 				(val & 0x2) ~= 0 and 1 or 0.25,
 				(val & 0x4) ~= 0 and 1 or 0.25,
 				0.8
-			)
+			}
 
 			-- Draw light.
-			local lightpos = math3d.vector():pack(lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius)
+			local lightpos = { lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius }
 
 			bgfx.set_uniform(ctx.u_lightPosRadius, lightpos)
 			bgfx.set_uniform(ctx.u_lightRgbInnerR, lightRgbInnerR)
-			bgfx.set_uniform(ctx.u_mtx, invMvp)
+			bgfx.set_uniform(ctx.u_mtx, ms(vp, "im"))
 			local scissorHeight = y1-y0
 			bgfx.set_scissor(math.floor(x0), math.floor(ctx.height - scissorHeight - y0), math.floor(x1-x0), math.floor(scissorHeight))
 			bgfx.set_texture(0, ctx.s_normal, bgfx.get_texture(ctx.m_gbuffer, 1))
 			bgfx.set_texture(1, ctx.s_depth, bgfx.get_texture(ctx.m_gbuffer, 2))
 			bgfx.set_state(ctx.light_state)
 
-			screenSpaceQuad( ctx.width, ctx.height, ctx.s_texelHalf, ant.caps.originBottomLeft)
+			screenSpaceQuad( ctx.width, ctx.height, ctx.s_texelHalf, util.caps.originBottomLeft)
 
 			bgfx.submit(RENDER_PASS_LIGHT_ID, ctx.m_lightProgram)
 		end
@@ -313,20 +307,19 @@ local function mainloop()
 
 	bgfx.set_state(ctx.combine_state)
 
-	screenSpaceQuad( ctx.width, ctx.height, ctx.s_texelHalf, ant.caps.originBottomLeft)
+	screenSpaceQuad( ctx.width, ctx.height, ctx.s_texelHalf, util.caps.originBottomLeft)
 	bgfx.submit(RENDER_PASS_COMBINE_ID, ctx.m_combineProgram)
 
 	if settings.showGBuffer then
 		local aspectRatio = ctx.width/ctx.height
 
 		-- Draw m_debug m_gbuffer.
-		local mtx = math3d.matrix()
 		local count = #ctx.m_gbufferTex
 		for ii = 1, count do
-			mtx:srt(aspectRatio, 1, 1
-				,0,0,0
-				, -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0
-			)
+			local mtx = ms ( { type = "srt",
+				s = { aspectRatio, 1, 1 },
+				t = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 },
+			} , "m")
 
 			bgfx.set_transform(mtx)
 			bgfx.set_vertex_buffer(ctx.m_vbh)
@@ -340,14 +333,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init()
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-	}
-
-	-- Enable debug text.
-	bgfx.set_debug "T"
-
+function ctx.init()
 	-- Set palette color for index 0
 	bgfx.set_palette_color(0, 0)
 
@@ -483,10 +469,9 @@ local function init()
 	ctx.gbuffer_state = bgfx.make_state {
 		WRITE_MASK = "RGB",
 	}
-	ctx.s_texelHalf = ant.caps.rendererType == "DIRECT3D9" and 0.5 or 0
+	ctx.s_texelHalf = util.caps.rendererType == "DIRECT3D9" and 0.5 or 0
 
-
-	if ant.caps.limits.maxFBAttachments < 2 then
+	if util.caps.limits.maxFBAttachments < 2 then
 		mainloop = function()
 			bgfx.set_debug "T"
 			bgfx.dbg_text_print(0, 0, 0x1f, " MRT not supported by GPU. ")
@@ -494,18 +479,12 @@ local function init()
 			bgfx.frame()
 		end
 	end
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
---	ctx.proj = math3d.matrix("proj"):projmat(60, ctx.width/ctx.height, 0.1, 100)
 	bgfx.destroy(ctx.m_gbuffer)
 
 	local samplerFlags = "rt-p+p*pucvc"
@@ -525,12 +504,10 @@ function canvas:resize_cb(w,h)
 	bgfx.destroy(ctx.m_lightBuffer)
 	ctx.m_lightBuffer = bgfx.create_frame_buffer(w,h,"BGRA8", samplerFlags)
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 0.0, -15.0, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
-	local orthomat = math3d.matrix "ortho"
-	orthomat:orthomat(0,1,1,0,0,100)
+	ctx.view = ms:ref "matrix" ( ms ( { 0.0, 0.0, -15.0, }, { 0,0,0 }, "lP" ) )
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }
+	ctx.ortho = ms:ref "matrix" { type = "mat", ortho = true,
+		l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 }
 
 	bgfx.set_view_rect(RENDER_PASS_GEOMETRY_ID,      0, 0, w, h )
 	bgfx.set_view_rect(RENDER_PASS_LIGHT_ID,         0, 0, w, h )
@@ -538,21 +515,9 @@ function canvas:resize_cb(w,h)
 	bgfx.set_view_rect(RENDER_PASS_DEBUG_LIGHTS_ID,  0, 0, w, h )
 	bgfx.set_view_rect(RENDER_PASS_DEBUG_GBUFFER_ID, 0, 0, w, h )
 
---	bgfx.set_view_transform(0, viewmat, projmat)
---	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)
