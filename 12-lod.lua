@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local settings = {
 	distance = 2.0,
@@ -33,7 +35,9 @@ local function slider(name, title, min, max)
 	return s
 end
 
-local canvas = iup.canvas {}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
 local ctrl = iup.frame {
 	iup.vbox {
@@ -50,34 +54,33 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-dlg = iup.dialog {
+local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
 			ctrl,
 			margin = "10x10",
 		},
-		canvas,
+		ctx.canvas,
 	},
-  title = "12-lod",
-  size = "HALFxHALF",
+	title = "12-lod",
+	size = "HALFxHALF",
 }
 
-local ctx = {}
+local ms = math3d.new()
 
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 
-	local view = math3d.matrix():lookatp(0,2, - settings.distance, 0,1,0)
-	local proj = math3d.matrix "proj"
-	bgfx.set_view_transform(0, view, proj)
-	local mtx = math3d.matrix():scalemat(0.1, 0.1, 0.1)
+	local view = ms( {0,2, - settings.distance}, {0,1,0} , "lm")
+	bgfx.set_view_transform(0, view, ~ctx.proj)
+	local mtx = ms( { type = "srt", s = {0.1, 0.1, 0.1} }, "m")
 
 	local currentLODframe = settings.transitions and (32- ctx.m_transitionFrame) or 32
 	local mainLOD = settings.transitions and ctx.m_currLod or ctx.m_targetLod
 
-	local stipple = math3d.vector():pack( 0, -1, currentLODframe * 4 / 255 - 1/255 )
-	local stippleInv = math3d.vector():pack( 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255)
+	local stipple = { 0, -1, currentLODframe * 4 / 255 - 1/255, 0 }
+	local stippleInv = { 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255, 0 }
 
 	bgfx.set_texture(0, ctx.s_texColor, ctx.m_textureBark)
 	bgfx.set_texture(1, ctx.s_texStipple, ctx.m_textureStipple)
@@ -135,9 +138,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
---	bgfx.set_debug "ST"
+function ctx.init()
 	ctx.stateOpaque = nil -- default
 	ctx.stateTransparent = bgfx.make_state {
 		WRITE_MASK = "RGBA",
@@ -184,33 +185,17 @@ local function init(canvas)
 	ctx.m_transitionFrame = 0
 	ctx.m_currLod         = 1
 	ctx.m_targetLod       = 1
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 	bgfx.set_view_rect(0, 0, 0, w, h)
-	ctx.proj = math3d.matrix("proj"):projmat(60, ctx.width/ctx.height, 0.1, 100)
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60,  aspect = w/h , n = 0.1, f = 100 }
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)
