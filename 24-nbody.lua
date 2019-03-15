@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local kThreadGroupUpdateSize = 512
 local kMaxParticleCount      = 32 * 1024
@@ -139,7 +141,9 @@ local useIndirect_ctrl = iup.toggle {
 	end
 }
 
-local canvas = iup.canvas {}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
 local ctrl = iup.frame {
 	iup.vbox {
@@ -167,19 +171,19 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-dlg = iup.dialog {
+local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
 			ctrl,
 			margin = "2x2",
 		},
-		canvas,
+		ctx.canvas,
 	},
-  title = "24-nbody",
-  size = "HALFxHALF",
+	title = "24-nbody",
+	size = "HALFxHALF",
 }
 
-local ctx = {}
+local ms = util.mathstack
 
 local function packParams()
 	ctx.m_paramsData[1]:pack("fdff",
@@ -201,7 +205,7 @@ local function packParams()
 end
 
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 
 	local params = packParams()
 	if RESET then
@@ -253,10 +257,9 @@ local function mainloop()
 end
 
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
-	assert(ant.caps.supported.COMPUTE)
-	if not ant.caps.supported.DRAW_INDIRECT then
+function ctx.init()
+	assert(util.caps.supported.COMPUTE)
+	if not util.caps.supported.DRAW_INDIRECT then
 		useIndirect = false
 		useIndirect_ctrl.visible = "NO"
 	end
@@ -307,14 +310,14 @@ local function init(canvas)
 	ctx.m_indirectProgram = nil
 	ctx.m_indirectBuffer  = nil
 
-	if ant.caps.supported.DRAW_INDIRECT then
+	if util.caps.supported.DRAW_INDIRECT then
 		ctx.m_indirectProgram = util.computeLoad "cs_indirect"
 		ctx.m_indirectBuffer  = bgfx.create_indirect_buffer(2)
 	end
 
 	ctx.m_paramsData = {}
 	for i=1,3 do
-		math3d.vector(i, ctx.m_paramsData)
+		ctx.m_paramsData[i] = ms:ref "vector"
 	end
 
 	bgfx.set_uniform(ctx.u_params, table.unpack(packParams()))
@@ -323,37 +326,20 @@ local function init(canvas)
 	bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "w")
 	bgfx.dispatch(0, ctx.m_initInstancesProgram, kMaxParticleCount // kThreadGroupUpdateSize, 1, 1)
 
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 	bgfx.set_view_rect(0, 0, 0, w , h)
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0.0, 0.0, -45.0, 0,0,0)
-	projmat:projmat(90, ctx.width/ctx.height, 0.1, 10000)
+	local viewmat = ms( { 0,0, -45 }, { 0,0,0 }, "lP")
+	local projmat = ms:matrix { type = "mat", fov = 90, aspect = w/h, n = 0.1, f = 100000 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)
