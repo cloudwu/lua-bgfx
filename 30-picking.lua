@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local RENDER_PASS_SHADING = 0  -- Default forward rendered geo with simple shading
 local RENDER_PASS_ID = 1 -- ID buffer for picking
@@ -9,15 +11,18 @@ local RENDER_PASS_BLIT = 2  -- Blit GPU render target to CPU texture
 
 local ID_DIM = 8  -- Size of the ID buffer
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "30-picking",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
 
-local ctx = {}
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "30-picking",
+	size = "HALFxHALF",
+}
+
+local ms = util.mathstack
+local canvas = ctx.canvas
 
 function canvas:motion_cb(x,y)
 	ctx.mouse_x = x
@@ -32,35 +37,29 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	time = time + 0.01
 
 	bgfx.set_view_frame_buffer(RENDER_PASS_ID, ctx.m_pickingFB)
 
 	-- Set up picking pass
-	local viewProj = math3d.matrix():mul(math3d.matrix "view", math3d.matrix "proj")
-	local invViewProj = math3d.matrix():inverted(viewProj)
+	local invViewProj = ms(ctx.proj, ctx.view, "*iP")
 
 	-- Mouse coord in NDC
 	local mouseXNDC = ( ctx.mouse_x / ctx.width ) * 2 - 1
 	local mouseYNDC = ( ctx.height - ctx.mouse_y) / ctx.height * 2 - 1
 
-	local pickEye = math3d.vector()
-	local mousePosNDC = math3d.vector():pack( mouseXNDC, mouseYNDC, 0.0 )
+	local mousePosNDC = ms:vector(mouseXNDC, mouseYNDC, 0.0, 1)
+	local pickEye = ms( mousePosNDC, invViewProj, "%P")
 
-	pickEye:mulH(mousePosNDC, invViewProj)
-
-	local pickAt = math3d.vector()
-	local mousePosNDCEnd = math3d.vector():pack( mouseXNDC, mouseYNDC, 1 )
-	pickAt:mulH(mousePosNDCEnd, invViewProj)
+	local mousePosNDCEnd = ms:vector ( mouseXNDC, mouseYNDC, 1, 1 )
+	local pickAt = ms ( mousePosNDCEnd, invViewProj, "%P")
 
 	-- Look at our unprojected point
-	local pickView = math3d.matrix()
-	pickView:lookat(pickEye, pickAt)
+	local pickView = ms ( pickEye, pickAt, "lP" )
 
 	-- Tight FOV is best for picking
-	local pickProj = math3d.matrix()
-	pickProj:projmat(ctx.m_fov, 1, 0.1, 100.0)
+	local pickProj = ms:matrix { type = "mat", fov = ctx.m_fov , aspect = 1, n = 0.1, f = 100.0 }
 
 	-- View rect and transforms for picking pass
 	bgfx.set_view_rect(RENDER_PASS_ID, 0, 0, ID_DIM, ID_DIM)
@@ -69,22 +68,18 @@ local function mainloop()
 	-- Now that our passes are set up, we can finally draw each mesh
 
 	-- Picking highlights a mesh so we'll set up this tint color
-	local mtx = math3d.matrix()
 	for mesh = 1,12 do
 		local scale = ctx.m_meshScale[mesh]
 		-- Set up transform matrix for each mesh
-		mtx:srt(scale, scale, scale
-			, 0.0
-			, time*0.37*((mesh -1 ) % 2 * 2 - 1)
-			, 0.0
-			, ((mesh-1) % 4) - 1.5
-			, ((mesh-1) // 4) - 1.25
-			, 0.0
+		local mtx = ms:srtmat(
+			{scale,scale,scale} ,
+			{ 0.0, time*0.37*((mesh -1 ) % 2 * 2 - 1), 0.0 },
+			{ ((mesh-1) % 4) - 1.5, ((mesh-1) // 4) - 1.25, 0.0 }
 		)
 
 		-- Submit mesh to both of our render passes
 		-- Set uniform based on if this is the highlighted mesh
-		bgfx.set_uniform(ctx.u_tint, math3d.vector( mesh == ctx.m_highlighted and "tintHighlighted" or "tintBasic"))
+		bgfx.set_uniform(ctx.u_tint, ctx[( mesh == ctx.m_highlighted and "tintHighlighted" or "tintBasic")])
 		bgfx.set_transform(mtx)
 		bgfx.set_state(ctx.state)
 		util.meshSubmit(ctx.m_meshes[mesh], RENDER_PASS_SHADING, ctx.m_shadingProgram)
@@ -132,8 +127,7 @@ local function mainloop()
 	ctx.m_currFrame = bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	-- Set up screen clears
 	bgfx.set_view_clear(RENDER_PASS_SHADING, "CD", 0x303030ff, 1, 0)
 	-- ID buffer clears to black, which represnts clicking on nothing (background)
@@ -184,7 +178,7 @@ local function init(canvas)
 --		local rr = ii
 --		local gg = 0
 --		local bb = 0
-		math3d.vector(ii, ctx.m_idsF):pack(rr / 255,gg / 255,bb / 255,1)
+		ctx.m_idsF[ii] = ms:ref "vector" (rr / 255,gg / 255,bb / 255,1)
 		ctx.m_idsU[rr + (gg << 8) + (bb << 16) + (255 << 24)] = ii	-- map id
 	end
 
@@ -208,48 +202,31 @@ local function init(canvas)
 		MSAA = true,
 	}
 
-	math3d.vector("tintBasic"):pack(1,1,1,1)
-	math3d.vector("tintHighlighted"):pack(0.3,0.3,2,1)
+	ctx.tintBasic = ms:ref "vector" (1,1,1,1)
+	ctx.tintHighlighted = ms:ref "vector" (0.3,0.3,2,1)
 
 	ctx.mouse_x = 0
 	ctx.mouse_y = 0
 
 	ctx.m_blitData = bgfx.memory_texture(ID_DIM*ID_DIM * 4)
 
-	assert(ant.caps.supported.TEXTURE_BLIT)
-
-	ant.mainloop(mainloop)
+	assert(util.caps.supported.TEXTURE_BLIT)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0,0,-2.5, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	ctx.view = ms:ref "matrix" (ms( { 0,0,-2.5 }, { 0,0,0 }, "lP"))
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 
 	-- Set up view rect and transform for the shaded pass
-	bgfx.set_view_transform(RENDER_PASS_SHADING, viewmat, projmat)
+	bgfx.set_view_transform(RENDER_PASS_SHADING, ctx.view, ctx.proj)
 	bgfx.set_view_rect(RENDER_PASS_SHADING, 0, 0, ctx.width, ctx.height)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  ant.shutdown()
-end
+util.run(mainloop)
