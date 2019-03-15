@@ -30,12 +30,12 @@ local function mainloop()
 			local mtx = ms( { type = "srt",
 				r = { time + xx* 0.21 , time + yy * 0.37, 0 },
 				t = { -15.0 + xx*3.0, -15.0 + yy*3.0, 0.0 },
-			} , "m")
+			} , "P")
 			local color = ms( {
 				math.sin(time+xx/11)*0.5+0.5,
 				math.cos(time+yy/11)*0.5+0.5,
 				math.sin(time*3.0)*0.5+0.5
-				}, "m")
+				}, "P")
 			ctx.idb(i, mtx, color)
 			i = i + 1
 		end

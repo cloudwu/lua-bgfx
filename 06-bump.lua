@@ -63,10 +63,7 @@ local function mainloop_instancing()
 	ctx.idb:alloc(9)
 	for yy= 0,2 do
 		for xx=0,2 do
-			local mtx = ms( { type = "srt",
-				r = { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },
-				t = { -3+xx*3, -3+yy*3, 0 }}, "m")
-			ctx.idb(yy*3+xx, mtx)
+			ctx.idb(yy*3+xx, ms:srtmat(nil, { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },{ -3+xx*3, -3+yy*3, 0 } ) )
 		end
 	end
 	ctx.idb:set()
