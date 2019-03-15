@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local kDimWidth  = 11
 local kDimHeight = 11
@@ -18,33 +20,31 @@ local s_cubeVertices = {
 	 1.0, -1.0, -1.0, 0xffffffff ,
 }
 
-canvas = iup.canvas{}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
-dlg = iup.dialog {
-  canvas,
-  title = "35-dynamic",
-  size = "HALFxHALF",
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "35-dynamic",
+	size = "HALFxHALF",
 }
 
 local tmp = { "fffd" }
-local ctx = {}
+local ms = util.mathstack
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
-	local mat = math3d.matrix()
 	time = time + 0.01
 
-
-	local mtx = math3d.matrix()
 	do
-		local angle math.random()
-		mtx:rotmat(0,0,angle)
-		local vec = math3d.vector()
+		local angle = math.random()
+		local mtx = ms:srtmat( nil, { 0,0, angle }, nil)
 		for i = 2, 33, 4 do
-			vec:pack(s_cubeVertices[i], s_cubeVertices[i+1], s_cubeVertices[i+2])
-			vec:mul(mtx)
-			tmp[i], tmp[i+1], tmp[i+2] = vec:unpack()
+			local vec = ms:vector(s_cubeVertices[i], s_cubeVertices[i+1], s_cubeVertices[i+2])
+			vec = ms( mtx, vec, "*T" )
+			tmp[i], tmp[i+1], tmp[i+2] = vec[1],vec[2],vec[3]
 			local r = math.random(0,0xff)
 			local g = math.random(0,0xff)
 			local b = math.random(0,0xff)
@@ -60,7 +60,7 @@ local function mainloop()
 
 	for yy = 0, kDimHeight do
 		for xx = 0, kDimWidth do
-			mtx:rotmat(time + xx*0.21, time + yy * 0.37):trans(-15.0 + xx * 3, -15.0 + yy * 3, 0)
+			local mtx = ms:srtmat ( nil, {time + xx*0.21, time + yy * 0.37, 0}, {-15.0 + xx * 3, -15.0 + yy * 3, 0} )
 			-- Set model matrix for rendering.
 			bgfx.set_transform(mtx)
 			-- Set vertex and index buffer.
@@ -76,10 +76,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-	}
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 
 	ctx.vdecl = bgfx.vertex_decl {
@@ -115,36 +112,19 @@ local function init(canvas)
 	ctx.prog = util.programLoad("vs_cubes", "fs_cubes")
 
 	ctx.state = bgfx.make_state({ PT = "TRISTRIP" } , nil)	-- base on BGFX_STATE_DEFAULT
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,0,-35, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	local viewmat = ms( { 0,0,-35}, { 0,0,0}, "lP")
+	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  ant.shutdown()
-end
+util.run(mainloop)
