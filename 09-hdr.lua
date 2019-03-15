@@ -204,7 +204,7 @@ local function mainloop()
 		bgfx.set_view_transform(i, nil, ctx.ortho)
 	end
 
-	local mtx = ms( { type = "srt",	r = { 0, time, 0 } } , "1m" )	-- mtx on stack
+	local mtx = ms( { type = "srt",	r = { 0, time, 0 } } , "1P" )	-- mtx on stack
 	local view = ms( { 0,1,-2.5 } , "*" , { 0,1,0 }, "lP")
 
 	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
@@ -216,7 +216,7 @@ local function mainloop()
 	screenSpaceQuad( ctx.width, ctx.height, true)
 	bgfx.submit(hdrSkybox, ctx.m_skyProgram)
 
-	local tonemap = ms ( { settings.middleGray,	settings.white ^ 2,	settings.threshold,	time }, "m")
+	local tonemap = ms:vector ( settings.middleGray, settings.white ^ 2,	settings.threshold,	time )
 	local originBottomLeft = util.caps.originBottomLeft
 
 	-- Render m_mesh into view hdrMesh.

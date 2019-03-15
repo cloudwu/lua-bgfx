@@ -276,19 +276,19 @@ local function mainloop()
 			end
 
 			local val = light & 7
-			local lightRgbInnerR = {
+			local lightRgbInnerR = ms:vector (
 				(val & 0x1) ~= 0 and 1 or 0.25,
 				(val & 0x2) ~= 0 and 1 or 0.25,
 				(val & 0x4) ~= 0 and 1 or 0.25,
 				0.8
-			}
+			)
 
 			-- Draw light.
-			local lightpos = { lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius }
+			local lightpos = ms:vector ( lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius )
 
 			bgfx.set_uniform(ctx.u_lightPosRadius, lightpos)
 			bgfx.set_uniform(ctx.u_lightRgbInnerR, lightRgbInnerR)
-			bgfx.set_uniform(ctx.u_mtx, ms(vp, "im"))
+			bgfx.set_uniform(ctx.u_mtx, ms(vp, "iP"))
 			local scissorHeight = y1-y0
 			bgfx.set_scissor(math.floor(x0), math.floor(ctx.height - scissorHeight - y0), math.floor(x1-x0), math.floor(scissorHeight))
 			bgfx.set_texture(0, ctx.s_normal, bgfx.get_texture(ctx.m_gbuffer, 1))

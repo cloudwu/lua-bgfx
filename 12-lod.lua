@@ -79,8 +79,8 @@ local function mainloop()
 	local currentLODframe = settings.transitions and (32- ctx.m_transitionFrame) or 32
 	local mainLOD = settings.transitions and ctx.m_currLod or ctx.m_targetLod
 
-	local stipple = { 0, -1, currentLODframe * 4 / 255 - 1/255, 0 }
-	local stippleInv = { 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255, 0 }
+	local stipple = ms:vector ( 0, -1, currentLODframe * 4 / 255 - 1/255, 0 )
+	local stippleInv = ms:vector ( 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255, 0 )
 
 	bgfx.set_texture(0, ctx.s_texColor, ctx.m_textureBark)
 	bgfx.set_texture(1, ctx.s_texStipple, ctx.m_textureStipple)

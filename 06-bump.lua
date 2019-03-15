@@ -23,9 +23,9 @@ local time = 0
 local function setlight()
 	local light = {}
 	for i=1,ctx.numLights do
-		light[i] = { math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
+		light[i] = ms:vector ( math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
 			math.cos(time*(0.2+i*0.29) + i * math.pi * 1.49) * 3,
-			-2.5, 3 }
+			-2.5, 3 )
 	end
 
 	bgfx.set_uniform(ctx.u_lightPosRadius, table.unpack(light))
@@ -157,10 +157,10 @@ function ctx.init()
 	ctx.textureNormal = util.textureLoad "textures/fieldstone-n.dds"
 
 	ctx.lightRgbInnerR = {
-		{ 1.0, 0.7, 0.2, 0.8 },
-		{ 0.7, 0.2, 1.0, 0.8 },
-		{ 0.2, 1.0, 0.7, 0.8 },
-		{ 1.0, 0.4, 0.2, 0.8 },
+		ms:ref "vector" { 1.0, 0.7, 0.2, 0.8 },
+		ms:ref "vector" { 0.7, 0.2, 1.0, 0.8 },
+		ms:ref "vector" { 0.2, 1.0, 0.7, 0.8 },
+		ms:ref "vector" { 1.0, 0.4, 0.2, 0.8 },
 	}
 
 	if util.caps.supported.INSTANCING then

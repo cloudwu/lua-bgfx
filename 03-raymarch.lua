@@ -52,7 +52,7 @@ local function mainloop()
 	lightDirTime[4] = time
 
 	bgfx.set_uniform(ctx.u_lightDirTime, lightDirTime)
-	local invMvp = ms(vp, mtx,"*im")
+	local invMvp = ms(vp, mtx,"*iP")
 	bgfx.set_uniform(ctx.u_mtx, invMvp)
 
 	renderScreenSpaceQuad(0.0, 0.0, 1280.0, 720.0)
