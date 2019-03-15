@@ -28,12 +28,7 @@ local function mainloop()
 	time = time + 0.001
 	for yy = 0, 10 do
 		for xx = 0, 10 do
-			local mat = ms (
-				{ type = "srt",
-					r = { time + xx*0.21, time + yy*0.37, 0 },	-- rot degree
-					t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 }   -- trans
-				},  "P")
-			bgfx.set_transform(mat)
+			bgfx.set_transform( ms:srtmat ( nil, { time + xx*0.21, time + yy*0.37, 0 }, { -15.0 + xx * 3, -15.0 + yy * 3, 0 }))
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
 			bgfx.set_state(ctx.state)

@@ -74,7 +74,7 @@ local function mainloop()
 
 	local view = ms( {0,2, - settings.distance}, {0,1,0} , "lP")
 	bgfx.set_view_transform(0, view, ctx.proj)
-	local mtx = ms( { type = "srt", s = {0.1, 0.1, 0.1} }, "P")
+	local mtx = ms:srtmat( {0.1, 0.1, 0.1} , nil, nil )
 
 	local currentLODframe = settings.transitions and (32- ctx.m_transitionFrame) or 32
 	local mainLOD = settings.transitions and ctx.m_currLod or ctx.m_targetLod

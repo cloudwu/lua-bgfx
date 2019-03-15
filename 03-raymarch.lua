@@ -47,7 +47,7 @@ local function mainloop()
 	time = time + 0.01
 
 	local vp = ms(ctx.projmat, ctx.viewmat, "*P")
-	local mtx = ms ( { type = "srt", r = { time , time * 0.37, 0 }	}, "P" )
+	local mtx = ms:srtmat ( nil, { time , time * 0.37, 0 } , nil )
 	local lightDirTime = ms(mtx, "i", {-0.4, -0.5, -1.0, 0} , "n*T")
 	lightDirTime[4] = time
 

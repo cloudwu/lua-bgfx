@@ -204,8 +204,8 @@ local function mainloop()
 		bgfx.set_view_transform(i, nil, ctx.ortho)
 	end
 
-	local mtx = ms( { type = "srt",	r = { 0, time, 0 } } , "1P" )	-- mtx on stack
-	local view = ms( { 0,1,-2.5 } , "*" , { 0,1,0 }, "lP")
+	local mtx = ms:srtmat ( nil,  { 0, time, 0 }, nil )
+	local view = ms( mtx, { 0,1,-2.5 } , "*" , { 0,1,0 }, "lP")
 
 	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
 

@@ -170,13 +170,13 @@ local function mainloop()
 	-- Draw into geometry pass.
 	for yy = 0, dim-1 do
 		for xx = 0, dim-1 do
-			local srt = { type = "srt" }
+			local s,r,t
 			if settings.animateMesh then
-				srt.r = { time * 1.023 + xx*0.21, time*0.03 + yy* 0.37, 0 }
+				r = { time * 1.023 + xx*0.21, time*0.03 + yy* 0.37, 0 }
 			end
-			srt.t = { -offset + xx * 3, -offset + yy * 3, 0 }
+			t = { -offset + xx * 3, -offset + yy * 3, 0 }
 			-- Set transform for draw call.
-			bgfx.set_transform(ms (srt , "P"))
+			bgfx.set_transform(ms:srtmat(s,r,t))
 
 			-- Set vertex and index buffer.
 			bgfx.set_vertex_buffer(ctx.m_vbh)
@@ -316,12 +316,7 @@ local function mainloop()
 		-- Draw m_debug m_gbuffer.
 		local count = #ctx.m_gbufferTex
 		for ii = 1, count do
-			local mtx = ms ( { type = "srt",
-				s = { aspectRatio, 1, 1 },
-				t = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 },
-			} , "P")
-
-			bgfx.set_transform(mtx)
+			bgfx.set_transform(ms:srtmat({ aspectRatio, 1, 1 }, nil, { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 }))
 			bgfx.set_vertex_buffer(ctx.m_vbh)
 			bgfx.set_index_buffer(ctx.m_ibh, 0, 6)
 			bgfx.set_texture(0, ctx.s_texColor, ctx.m_gbufferTex[ii])

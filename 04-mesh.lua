@@ -23,7 +23,7 @@ local function mainloop()
 	bgfx.touch(0)
 	time = time + 0.01
 	bgfx.set_uniform(ctx.u_time, {time,0,0,0})
-	local mtx = ms( { type = "srt", r = {0, time, 0} }, "P")
+	local mtx = ms:srtmat(nil, {0, time, 0}, nil)
 	bgfx.set_transform(mtx)
 	bgfx.set_state(ctx.state)
 	util.meshSubmit(ctx.mesh, 0, ctx.prog)

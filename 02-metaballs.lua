@@ -524,12 +524,7 @@ local function mainloop()
 		end
 	end
 
-	local mat = ms (
-		{ type = "srt",
-			r = { time * 0.67, time, 0 },	-- rot degree
-		},  "P")
-
-	bgfx.set_transform(mat)
+	bgfx.set_transform(ms:srtmat ( nil, { time * 0.67, time, 0 } , nil) )
 	ctx.tvb:setV(0, 0, numVertices)
 	bgfx.set_state()	-- default state
 	-- { WRITE_MASK = "RGBAZ", DEPTH_TEST = "LESS", CULL = "CW", MSAA = true }
