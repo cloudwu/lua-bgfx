@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local settings = {
 	frontToBack = true,
@@ -9,7 +11,9 @@ local settings = {
 	mode = 1,
 }
 
-local canvas = iup.canvas {}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
 local function checkbox(key, title)
 	local value = settings[key]
@@ -70,19 +74,17 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-dlg = iup.dialog {
+local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
 			ctrl,
 			margin = "10x10",
 		},
-		canvas,
+		ctx.canvas,
 	},
-  title = "19-oit",
-  size = "HALFxHALF",
+	title = "19-oit",
+	size = "HALFxHALF",
 }
-
-local ctx = {}
 
 local function screenSpaceQuad(textureWidth, textureHeight, originBottomLeft)
 	local width = 1
@@ -114,9 +116,11 @@ local function screenSpaceQuad(textureWidth, textureHeight, originBottomLeft)
 	ctx.tvb:set()
 end
 
+local ms = util.mathstack
+
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	time = time + 0.01
 	-- Set palette color for index 0
 	bgfx.set_palette_color(0, 0, 0, 0, 0)
@@ -142,23 +146,20 @@ local function mainloop()
 		bgfx.set_view_frame_buffer(0,ctx.m_fbh)
 	end
 
-	local color = math3d.vector()
-	local mtx = math3d.matrix()
 	for depth = 0, 2 do
 		local zz = settings.frontToBack and 2-depth or depth
 
 		for yy = 0, 2 do
 			for xx = 0, 2 do
-				color:pack(xx/3, zz/3, yy/3, 0.5)
-
+				local w = 0.5
 				if settings.fadeInOut and zz == 1 then
-					color:pack(nil,nil,nil, math.sin(time*3.0)*0.49+0.5)
+					w = math.sin(time*3.0)*0.49+0.5
 				end
+				local color = ms:vector(xx/3, zz/3, yy/3, w)
 
 				bgfx.set_uniform(ctx.u_color, color)
 
-				mtx:rotmat(time*0.023 + xx*0.21, time*0.03 + yy*0.37)
-				mtx:packline(4, -2.5+xx*2.5, -2.5+yy*2.5, -2.5+zz*2.5)
+				local mtx = ms:srtmat( nil, {time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0}, {-2.5+xx*2.5, -2.5+yy*2.5, -2.5+zz*2.5} )
 
 				-- Set transform for draw call.
 				bgfx.set_transform(mtx)
@@ -195,15 +196,14 @@ local function mainloop()
 		bgfx.set_texture(0, ctx.s_texColor0, ctx.m_fbtextures[1])
 		bgfx.set_texture(1, ctx.s_texColor1, ctx.m_fbtextures[2])
 		bgfx.set_state(ctx.state_screen)
-		screenSpaceQuad(ctx.width, ctx.height, ant.caps.originBottomLeft)
+		screenSpaceQuad(ctx.width, ctx.height, util.caps.originBottomLeft)
 		bgfx.submit(1, 1 == settings.mode and ctx.m_wbSeparateBlit or ctx.m_wbBlit)
 	end
 
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	ctx.PosColorVertex = bgfx.vertex_decl {
 		{ "POSITION",  3, "FLOAT" },
 		{ "COLOR0",    4, "UINT8", true },
@@ -254,7 +254,7 @@ local function init(canvas)
 	ctx.m_wbPass         = util.programLoad("vs_oit",      "fs_oit_wb"               )
 	ctx.m_wbBlit         = util.programLoad("vs_oit_blit", "fs_oit_wb_blit"          )
 
-	assert(ant.caps.limits.maxFBAttachments >= 2)
+	assert(util.caps.limits.maxFBAttachments >= 2)
 	assert(bgfx.is_texture_valid(0, false, 1, "RGBA16F", "rt"))
 	assert(bgfx.is_texture_valid(0, false, 1, "R16F", "rt"))
 
@@ -287,16 +287,10 @@ local function init(canvas)
 	}
 
 	ctx.m_fbtextures = {}
-	ctx.s_texelHalf = ant.caps.rendererType == "DIRECT3D9" and 0.5 or 0
-
-	ant.mainloop(mainloop)
+	ctx.s_texelHalf = util.caps.rendererType == "DIRECT3D9" and 0.5 or 0
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 
@@ -311,32 +305,18 @@ function canvas:resize_cb(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,0,-7, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	local viewmat = ms:matrix( ms( {0,0,-7}, {0,0,0} , "lP") )
+	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 
 
 	-- Set view and projection matrix for view 1.
-	local viewmat1 = math3d.matrix "view1"
-	viewmat1:identity()
-	local projmat1 = math3d.matrix "proj1"
-	projmat1:orthomat(0,1,1,0,0,100)
+	local viewmat1 = math3d.constant "identmat"
+	local projmat1 = ms:matrix { type = "mat", ortho = true, l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 }
 	bgfx.set_view_transform(1, viewmat1, projmat1)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)
