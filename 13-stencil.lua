@@ -1,8 +1,10 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
 local bgfxu = require "bgfx.util"
+local util = require "util"
+local math3d = require "math3d"
 
 local RENDER_VIEWID_RANGE1_PASS_0 = 1
 local RENDER_VIEWID_RANGE1_PASS_1 = 2
@@ -23,7 +25,10 @@ local settings = {
 	scene = "StencilReflectionScene",
 }
 
-local canvas = iup.canvas {}
+
+local ctx = {
+	canvas = iup.canvas {},
+}
 
 local ctrls = {}
 
@@ -123,31 +128,33 @@ dlg = iup.dialog {
 			ctrls.panel,
 			margin = "10x10",
 		},
-		canvas,
+		ctx.canvas,
 	},
-  title = "12-lod",
-  size = "HALFxHALF",
+	title = "12-lod",
+	size = "HALFxHALF",
 }
 
-local ctx = {}
+local ms = util.mathstack
+
 local Uniforms = {}
 
 local function init_Uniforms()
-	math3d.vector("params", Uniforms):pack(1,1,4,4)
-		-- m_ambientPass, m_lightingPass, m_lightCount, m_lightIndex
---	math3d.vector("svparams", Uniforms)
-	math3d.vector("ambient", Uniforms):pack(0.02, 0.02, 0.02)
-	math3d.vector("diffuse", Uniforms):pack(0.2, 0.2, 0.2)
-	math3d.vector("specular_shininess", Uniforms):pack(1,1,1,10)	-- 10:shininess
-	math3d.vector("color", Uniforms):pack(1,1,1,1)
+	Uniforms.params = ms:ref "vector" ( 1,1,4,4 )
+-- m_ambientPass, m_lightingPass, m_lightCount, m_lightIndex
+--	Uniforms.svparams = ms:ref "vector"
+	Uniforms.ambient = ms:ref "vector" (0.02, 0.02, 0.02)
+	Uniforms.diffuse = ms:ref "vector" (0.2, 0.2, 0.2)
+	Uniforms.specular_shininess = ms:ref "vector" (1,1,1,10)	-- 10:shininess
+	Uniforms.color = ms:ref "vector" (1,1,1,1)
 
 --		m_time = 0.0f;
 	Uniforms.lightPosRadius = {}
 	Uniforms.lightRgbInnerR = {}
 	Uniforms.tmpLights = {}	-- temp
 	for i = 1, MAX_LIGHTS do
-		math3d.vector(i, Uniforms.lightPosRadius):pack(0,0,0,1)
-		math3d.vector(i, Uniforms.lightRgbInnerR):pack(1,1,1,1)
+		Uniforms.lightPosRadius[i] = ms:ref "vector" (0,0,0,1)
+		Uniforms.lightRgbInnerR[i] = ms:ref "vector" (1,1,1,1)
+		Uniforms.tmpLights[i] = ms:ref "vector"
 	end
 
 	Uniforms.u_params = bgfx.create_uniform("u_params", "v4")
@@ -168,8 +175,9 @@ end
 local function submitPerDrawUniforms()
 	bgfx.set_uniform(Uniforms.u_params, Uniforms.params)
 	bgfx.set_uniform(Uniforms.u_color, Uniforms.color)
-	bgfx.set_uniform(Uniforms.u_lightPosRadius, table.unpack(Uniforms.lightPosRadius))
-	bgfx.set_uniform(Uniforms.u_lightRgbInnerR, table.unpack(Uniforms.lightRgbInnerR))
+	local n = math.floor(settings.lights)
+	bgfx.set_uniform(Uniforms.u_lightPosRadius, table.unpack(Uniforms.lightPosRadius,1,n))
+	bgfx.set_uniform(Uniforms.u_lightRgbInnerR, table.unpack(Uniforms.lightRgbInnerR,1,n))
 end
 
 -- render state
@@ -286,10 +294,10 @@ local function set_state(s)
 	bgfx.set_stencil(s.fstencil)
 end
 
-local function mtxBillboard(result,  view, pos, s0, s1, s2)
+local function mtxBillboard(view, pos, s0, s1, s2)
 	local v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15 = view:unpack()
 	local p0,p1,p2 = pos:unpack()
-	result:pack(
+	return ms:matrix (
 		v0 * s0,
 		v4 * s0,
 		v8 * s0,
@@ -307,16 +315,14 @@ local function mtxBillboard(result,  view, pos, s0, s1, s2)
 		p2,
 		1
 	)
-
-	return result
 end
 
-local function mtxShadow(result , ground, light)
-	local g0,g1,g2,g3 = ground:unpack()
-	local l0,l1,l2,l3 = light:unpack()
+local function mtxShadow(ground, light)
+	local g0,g1,g2,g3 = table.unpack(ground)
+	local l0,l1,l2,l3 = table.unpack(light)
 	local dot = g0 * l0 + g1 * l1 + g2 * l2 + g3 * l3
 
-	result:pack(
+	return ms:matrix (
 		dot - l0 * g0,
 		    - l1 * g0,
 		    - l2 * g0,
@@ -337,8 +343,6 @@ local function mtxShadow(result , ground, light)
 		    - l2 * g3,
 		dot - l3 * g3
 	)
-
-	return result
 end
 
 local draw_views = {
@@ -352,19 +356,16 @@ local draw_views = {
 local time = 0
 local deltaTime = 0.01
 local function mainloop()
-	local view = math3d.matrix "view"
-	local proj = math3d.matrix "proj"
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	time = time + deltaTime
 
 	submitConstUniforms()
 
 	-- Update settings.
-	local numLights = settings.lights
+	local numLights = math.floor(settings.lights)
 
-	Uniforms.params:pack(1,1,numLights,0)
-	Uniforms.color:pack(nil,nil,nil, settings.reflection)
+	Uniforms.params(1,1,numLights,0)
 
 	if settings.updateLights then
 		ctx.lightTimeAccumulator = ctx.lightTimeAccumulator + deltaTime
@@ -377,7 +378,7 @@ local function mainloop()
 	local radius = (settings.scene == "StencilReflectionScene") and 15 or 25
 	local pihalf = math.pi / 2
 	for i = 1, numLights do
-		math3d.vector(i, Uniforms.lightPosRadius):pack(
+		Uniforms.lightPosRadius[i] (
 			math.sin(ctx.lightTimeAccumulator * 1.1 + i * 0.03 + i * pihalf* 1.07) * 20,
 			8 + (1 - math.cos(ctx.lightTimeAccumulator * 1.5 + i * 0.29 + pihalf * 1.49)) * 4,
 			math.cos(ctx.lightTimeAccumulator * 1.3 + i * 0.13 + i * pihalf * 1.79) * 20,
@@ -386,28 +387,24 @@ local function mainloop()
 	end
 
 	-- Floor position.
-	local floorMtx = math3d.matrix():srt(20,20,20,0,0,0,0,0,0)
+	local floorMtx = ms:srtmat( {20,20,20},nil,nil)
 
 	-- Bunny position.
-	local bunnyMtx = math3d.matrix():srt(5,5,5,0,1.56 - ctx.sceneTimeAccumulator, 0, 0,2,0)
+	local bunnyMtx = ms:srtmat( {5,5,5},{0,1.56 - ctx.sceneTimeAccumulator, 0}, {0,2,0})
 
 	-- Columns position.
 
 	local columnMtx = {}
 	local dist = 14
-	columnMtx[1] = math3d.matrix():srt(1,1,1,0,0,0,
-		dist, 0, dist)
-	columnMtx[2] = math3d.matrix():srt(1,1,1,0,0,0,
-		-dist, 0, dist)
-	columnMtx[3] = math3d.matrix():srt(1,1,1,0,0,0,
-		dist, 0, -dist)
-	columnMtx[4] = math3d.matrix():srt(1,1,1,0,0,0,
-		-dist, 0, -dist)
+	columnMtx[1] = ms:srtmat(nil,nil, {dist, 0, dist})
+	columnMtx[2] = ms:srtmat(nil,nil, {-dist, 0, dist})
+	columnMtx[3] = ms:srtmat(nil,nil, {dist, 0, -dist})
+	columnMtx[4] = ms:srtmat(nil,nil, {-dist, 0, -dist})
 
 	bgfx.set_view_clear(0, "CDS", 0x303030ff, 1, 0)
 
 	-- Bunny and columns color.
-	Uniforms.color:pack(0.7, 0.65, 0.6)
+	Uniforms.color(0.7, 0.65, 0.6, settings.reflection)
 
 	if settings.scene == "StencilReflectionScene" then
 		-- First pass - Draw plane.
@@ -425,19 +422,17 @@ local function mainloop()
 		-- Clear depth from previous pass.
 		bgfx.set_view_clear(RENDER_VIEWID_RANGE1_PASS_1, "D", 0x303030ff, 1, 0)
 
-		local reflectMtx = math3d.matrix "reflectMtx"
-
 		-- Reflect lights.
 		local reflectedLights = Uniforms.tmpLights
 		for ii = 1, numLights do
-			local light = math3d.vector(ii, Uniforms.lightPosRadius)
-			local v = math3d.vector(ii, reflectedLights):copy(light)
-			light:mul(reflectMtx)
+			local light = Uniforms.lightPosRadius[ii]
+			reflectedLights[ii](light)
+			ms(light, ctx.reflectMtx, light, "*=")
 		end
 
 		-- Reflect and submit bunny.
 
-		local mtxReflectedBunny = math3d.matrix():mul(bunnyMtx, reflectMtx)
+		local mtxReflectedBunny = ms( ctx.reflectMtx , bunnyMtx, "*P")
 		set_state(s_renderStates.StencilReflection_DrawReflected)
 		bgfx.set_transform(mtxReflectedBunny)
 		submitPerDrawUniforms()
@@ -445,9 +440,8 @@ local function mainloop()
 
 		-- Reflect and submit columns.
 
-		local mtxReflectedColumn = math3d.matrix()
 		for ii = 1, 4 do
-			mtxReflectedColumn:mul(columnMtx[ii], reflectMtx)
+			local mtxReflectedColumn = ms(ctx.reflectMtx , columnMtx[ii], "*P")
 			set_state(s_renderStates.StencilReflection_DrawReflected)
 			bgfx.set_transform(mtxReflectedColumn)
 			submitPerDrawUniforms()
@@ -488,10 +482,8 @@ local function mainloop()
 		local cubeMtx = ctx.cubeMtx
 
 		for i=1,numCubes do
-			math3d.matrix(i, cubeMtx):srt(1,1,1,0,0,0,
-				math.sin(i*2 + 11 - ctx.sceneTimeAccumulator) * 13,
-				4,
-				math.cos(i*2 + 11 - ctx.sceneTimeAccumulator) * 13)
+			cubeMtx[i] = ms:srtmat(nil,nil, { math.sin(i*2 + 11 - ctx.sceneTimeAccumulator) * 13, 4,
+				math.cos(i*2 + 11 - ctx.sceneTimeAccumulator) * 13 } )
 		end
 
 		-- First pass - Draw entire scene. (ambient only).
@@ -520,12 +512,10 @@ local function mainloop()
 		end
 
 		-- Ground plane.
-		local plane_pos = math3d.vector():pack(0,0,0)
-		local normal = math3d.vector():pack(0,1,0)
-		local ground = math3d.vector():copy(normal)
-		ground:pack(nil, nil, nil, - plane_pos:dot(normal) - 0.01)	-- - 0.01 against z-fighting
+		local plane_pos = { 0,0,0 }
+		local normal = { 0,1,0 }
+		local ground = { 0,1,0, - ms(plane_pos, normal, ".", ms.popnumber) - 0.01 } -- - 0.01 against z-fighting
 
-		local pos = math3d.vector()
 		for i=1, numLights do
 			local viewId = RENDER_VIEWID_RANGE5_PASS_6 + i - 1
 			-- Clear stencil for this light source.
@@ -534,24 +524,22 @@ local function mainloop()
 			-- Draw shadow projection of scene objects.
 
 			-- Get homogeneous light pos.
-			pos:copy(math3d.vector(i, Uniforms.lightPosRadius)):pack(nil, nil, nil, 1)
+			local x,y,z = Uniforms.lightPosRadius[i]:unpack()
+			local pos = { x,y,z,1 }
 
 			-- Calculate shadow mtx for current light.
-			local shadowMtx = math3d.matrix()
-			mtxShadow(shadowMtx, ground, pos)
+			local shadowMtx = mtxShadow(ground, pos)
 
 			-- Submit bunny's shadow.
-			local mtxShadowedBunny = math3d.matrix():mul(bunnyMtx, shadowMtx)
+			local mtxShadowedBunny = ms(shadowMtx, bunnyMtx, "*P")
 			set_state(s_renderStates.ProjectionShadows_CraftStencil)
 			bgfx.set_transform(mtxShadowedBunny)
 			submitPerDrawUniforms()
 			util.meshSubmit(ctx.m_bunnyMesh, viewId, ctx.m_programColorBlack)
 
 			-- Submit cube shadows.
-			local mtxShadowedCube = math3d.matrix()
 			for j = 1, numCubes do
-				mtxShadowedCube:mul(cubeMtx[j], shadowMtx)
-
+				local mtxShadowedCube = ms(shadowMtx, cubeMtx[j], "*P")
 				set_state(s_renderStates.ProjectionShadows_CraftStencil)
 				bgfx.set_transform(mtxShadowedCube)
 				submitPerDrawUniforms()
@@ -559,7 +547,7 @@ local function mainloop()
 			end
 
 			-- Draw entire scene. (lighting pass only. blending is on)
-			Uniforms.params:pack(0,1,1, i - 1)
+			Uniforms.params(0,1,1, i - 1)
 
 			-- Bunny.
 			set_state(s_renderStates.ProjectionShadows_DrawDiffuse)
@@ -584,7 +572,7 @@ local function mainloop()
 			end
 
 			bgfx.set_view_rect(viewId, 0, 0, ctx.width, ctx.height)
-			bgfx.set_view_transform(viewId, view, proj)
+			bgfx.set_view_transform(viewId, ctx.view, ctx.proj)
 		end
 
 		-- Reset these to default..
@@ -592,10 +580,9 @@ local function mainloop()
 	end
 
 	-- lights
-	local lightMtx = math3d.matrix()
 	for ii = 1, numLights do
-		local c = math3d.vector("color", Uniforms):copy(math3d.vector(ii, Uniforms.lightRgbInnerR))
-		mtxBillboard(lightMtx, view, math3d.vector(ii, Uniforms.lightPosRadius), 1.5, 1.5, 1.5)
+		Uniforms.color(Uniforms.lightRgbInnerR[ii])
+		local lightMtx = mtxBillboard(ctx.view, Uniforms.lightPosRadius[ii], 1.5, 1.5, 1.5)
 		set_state(s_renderStates.Custom_BlendLightTexture)
 		bgfx.set_transform(lightMtx)
 		submitPerDrawUniforms()
@@ -605,14 +592,14 @@ local function mainloop()
 
 	-- Draw floor bottom.
 	set_state(s_renderStates.Custom_DrawPlaneBottom)
-	bgfx.set_transform(math3d.matrix "floor")
+	bgfx.set_transform(ctx.floor)
 	submitPerDrawUniforms()
 	bgfx.set_texture(0, ctx.s_texColor, ctx.m_flareTex)
 	util.meshSubmit(ctx.m_hplaneMesh, RENDER_VIEWID_RANGE1_PASS_7, ctx.m_programTexture)
 
 	for _,viewid in ipairs(draw_views[settings.scene]) do
 		bgfx.set_view_rect(viewid, 0, 0, ctx.width, ctx.height)
-		bgfx.set_view_transform(viewid, view, proj)
+		bgfx.set_view_transform(viewid, ctx.view, ctx.proj)
 	end
 
 	bgfx.frame()
@@ -629,10 +616,10 @@ local function mainloop()
 	end
 end
 
-local function mtxReflected(result , p , n)
-	local dot = p:dot(n)
-	local x,y,z = n:unpack()
-	result:pack(
+local function mtxReflected(p , n)
+	local dot = ms(p,n,".",ms.popnumber)
+	local x,y,z = n[1],n[2],n[3]
+	return ms:matrix (
 		 1 - 2 * x* x,  --  1-2Nx^2
 		-2 * x * y,		--  -2*Nx*Ny
 		-2 * x * z,		--  -2*NxNz
@@ -653,7 +640,6 @@ local function mtxReflected(result , p , n)
 		 2 * dot * z,	--  2*dot*Nz
 		 1				--  1
 	)
-	return result
 end
 
 local function mesh(vb, ib)
@@ -664,11 +650,8 @@ local function mesh(vb, ib)
 	return { group = { g } }
 end
 
-local function init(canvas)
-
-	ant.init { nwh = iup.GetAttributeData(canvas,"HWND") }
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION",  3, "FLOAT" },
@@ -776,51 +759,32 @@ local function init(canvas)
 
 	for i = 1, MAX_LIGHTS do
 		local index = i % #rgbInnerR + 1
-		math3d.vector(i, Uniforms.lightRgbInnerR):pack(table.unpack(rgbInnerR[index]))
+		Uniforms.lightRgbInnerR[i] = ms:ref "vector" (rgbInnerR[index])
 	end
 
 	ctx.lightTimeAccumulator = 0
 	ctx.sceneTimeAccumulator = 0
 
 
-	local plane_pos = math3d.vector():pack(0,0.01,0)
-	local normal = math3d.vector():pack(0,1,0)
+	local plane_pos = { 0,0.01,0 }
+	local normal = { 0,1,0 }
 
-	mtxReflected( math3d.matrix("reflectMtx"), plane_pos, normal)
-
-	math3d.matrix ("floor"):srt( 20,20,20,0,0,0,0,-0.1, 0)
+	ctx.reflectMtx = ms:ref "matrix" ( mtxReflected(plane_pos, normal) )
+	ctx.floor = ms:ref "matrix" { type = "srt", s = {20,20,20} , t = { 0, -0.1, 0 } }
 
 	ctx.cubeMtx = {}
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp( 0, 18, -40, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 2000)
+	ctx.view = ms:ref "matrix" (ms( { 0, 18, -40 }, {0,0,0} , "lP"))
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 2000 }
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destory resources
-  ant.shutdown()
-end
+util.run(mainloop)

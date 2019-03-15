@@ -150,10 +150,10 @@ function ctx.init()
 	ctx.textureNormal = util.textureLoad "textures/fieldstone-n.dds"
 
 	ctx.lightRgbInnerR = {
-		ms:ref "vector" { 1.0, 0.7, 0.2, 0.8 },
-		ms:ref "vector" { 0.7, 0.2, 1.0, 0.8 },
-		ms:ref "vector" { 0.2, 1.0, 0.7, 0.8 },
-		ms:ref "vector" { 1.0, 0.4, 0.2, 0.8 },
+		ms:ref "vector" ( 1.0, 0.7, 0.2, 0.8 ),
+		ms:ref "vector" ( 0.7, 0.2, 1.0, 0.8 ),
+		ms:ref "vector" ( 0.2, 1.0, 0.7, 0.8 ),
+		ms:ref "vector" ( 1.0, 0.4, 0.2, 0.8 ),
 	}
 
 	if util.caps.supported.INSTANCING then

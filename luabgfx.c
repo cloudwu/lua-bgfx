@@ -2919,7 +2919,7 @@ setUniform(lua_State *L, bgfx_uniform_handle_t uh, int sz) {
 	}
 	case LUA_TUSERDATA:
 	case LUA_TLIGHTUSERDATA:
-		// vectir or matrix
+		// vector or matrix
 		if (number == 1) {
 			// only one
 			void *data = lua_touserdata(L, 2);
