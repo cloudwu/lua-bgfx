@@ -1,35 +1,36 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local CUBES_DIM = 10
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "26-occlusion",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
 
-local ctx = {}
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "26-occlusion",
+	size = "HALFxHALF",
+}
+
+local ms = util.mathstack
 local time = 0
 
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 	bgfx.touch(2)
-	local mat = math3d.matrix()
 	time = time + 0.001
 
 	local img = {}
 	local offset = -(CUBES_DIM-1) * 3.0 / 2.0
-	local mtx = math3d.matrix()
 	for yy = 0, CUBES_DIM-1 do
 		for xx = 0, CUBES_DIM-1 do
-			mtx:rotmat(time + xx*0.21 , time + yy*0.37)
-			mtx:packline(4, offset + xx*3, 0, offset + yy*3)
+			local mtx = ms:srtmat ( nil, { time + xx*0.21 , time + yy*0.37, 0 }, {offset + xx*3, 0, offset + yy*3} )
 			local occlusionQuery = ctx.m_occlusionQueries[yy*CUBES_DIM+xx+1]
 
 			bgfx.set_transform(mtx)
@@ -74,11 +75,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-	}
-
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 	bgfx.set_view_clear(2, "CD", 0x202020ff, 1, 0)
 
@@ -119,7 +116,7 @@ local function init(canvas)
 		6, 3, 7,
 	}
 
-	assert(ant.caps.supported.OCCLUSION_QUERY)
+	assert(util.caps.supported.OCCLUSION_QUERY)
 
 	ctx.m_occlusionQueries = {}
 
@@ -131,43 +128,26 @@ local function init(canvas)
 		DEPTH_TEST = "LEQUAL",
 		CULL = "CW",
 	}
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(ctx.width,ctx.height, "v")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	local view2 = math3d.matrix "view2"
-	viewmat:lookatp(0,0,-35, 0,0,0)
-	projmat:projmat(90, ctx.width/ctx.height, 0.1, 10000)
+	local viewmat = ms( { 0,0,-35} , { 0,0,0 }, "lP")
+	local projmat = ms:matrix { type = "mat", fov = 90, aspect = w/h, n = 0.1, f = 10000 }
+	local view2 = ms( { 17.5, 10, -17.5 }, { 0,0,0 }, "lP")
 
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(1, 0, 0, ctx.width, ctx.height)
 	bgfx.set_view_transform(1, viewmat, projmat)
 
-	view2:lookatp(17.5, 10, -17.5 , 0,0,0)
 	bgfx.set_view_transform(2, view2, projmat)
 	bgfx.set_view_rect(2, 10, (h * 3//4 - 10), w//4, h//4)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  ant.shutdown()
-end
+util.run(mainloop)
