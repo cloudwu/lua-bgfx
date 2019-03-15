@@ -9,7 +9,7 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = math3d.new()
+local ms = util.mathstack
 
 local dlg = iup.dialog {
 	ctx.canvas,
@@ -103,8 +103,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms( { 0.0, 0.0, -35.0 }, {  0,0,0 }, "lm")
-	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+	local viewmat = ms( { 0.0, 0.0, -35.0 }, {  0,0,0 }, "lP")
+	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 end

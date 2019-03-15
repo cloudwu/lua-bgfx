@@ -66,15 +66,15 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = math3d.new()
+local ms = util.mathstack
 
 local function mainloop()
 	math3d.reset(ms)
 	bgfx.touch(0)
 
-	local view = ms( {0,2, - settings.distance}, {0,1,0} , "lm")
-	bgfx.set_view_transform(0, view, ~ctx.proj)
-	local mtx = ms( { type = "srt", s = {0.1, 0.1, 0.1} }, "m")
+	local view = ms( {0,2, - settings.distance}, {0,1,0} , "lP")
+	bgfx.set_view_transform(0, view, ctx.proj)
+	local mtx = ms( { type = "srt", s = {0.1, 0.1, 0.1} }, "P")
 
 	local currentLODframe = settings.transitions and (32- ctx.m_transitionFrame) or 32
 	local mainLOD = settings.transitions and ctx.m_currLod or ctx.m_targetLod

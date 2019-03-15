@@ -10,7 +10,7 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = math3d.new()
+local ms = util.mathstack
 
 local dlg = iup.dialog {
 	ctx.canvas,
@@ -44,7 +44,7 @@ local function mainloop()
 		for xx=0,2 do
 			local mtx = ms( { type = "srt",
 				r = { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },
-				t = { -3+xx*3, -3+yy*3, 0 } }, "m")
+				t = { -3+xx*3, -3+yy*3, 0 } }, "P")
 			bgfx.set_transform(mtx)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -177,8 +177,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms( { 0.0, 0.0, -7.0 }, {  0,0,0 }, "lm")
-	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+	local viewmat = ms( { 0.0, 0.0, -7.0 }, {  0,0,0 }, "lP")
+	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
 
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)

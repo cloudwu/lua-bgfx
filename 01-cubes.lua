@@ -13,7 +13,7 @@ local ctx = {
 	},
 }
 
-local ms = math3d.new()	-- new a math stack object
+local ms = util.mathstack
 
 local dlg = iup.dialog {
 	ctx.canvas,
@@ -32,7 +32,7 @@ local function mainloop()
 				{ type = "srt",
 					r = { time + xx*0.21, time + yy*0.37, 0 },	-- rot degree
 					t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 }   -- trans
-				},  "m")
+				},  "P")
 			bgfx.set_transform(mat)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -77,8 +77,8 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
 	-- calc lookat matrix, return matrix pointer, and remove top
-	local viewmat = ms({0,0,-35}, {0, 0, 0}, "lm")
-	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+	local viewmat = ms({0,0,-35}, {0, 0, 0}, "lP")
+	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 

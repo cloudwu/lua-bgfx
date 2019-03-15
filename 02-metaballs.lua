@@ -9,7 +9,7 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = math3d.new()
+local ms = util.mathstack
 
 local dlg = iup.dialog {
 	ctx.canvas,
@@ -527,7 +527,7 @@ local function mainloop()
 	local mat = ms (
 		{ type = "srt",
 			r = { time * 0.67, time, 0 },	-- rot degree
-		},  "m")
+		},  "P")
 
 	bgfx.set_transform(mat)
 	ctx.tvb:setV(0, 0, numVertices)
@@ -559,8 +559,8 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms({0,0,-50,1}, {0, 0, 0, 1}, "lm")
-	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "m")
+	local viewmat = ms({0,0,-50,1}, {0, 0, 0, 1}, "lP")
+	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
 
 	bgfx.set_view_transform(0, viewmat, projmat)
 end

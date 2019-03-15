@@ -63,7 +63,7 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-local ms = math3d.new()
+local ms = util.mathstack
 
 local dlg = iup.dialog {
 	iup.hbox {
@@ -201,13 +201,13 @@ local function mainloop()
 	bgfx.set_view_order(view_order)
 
 	for i=0,#view_order-1 do
-		bgfx.set_view_transform(i, nil, ~ctx.ortho)
+		bgfx.set_view_transform(i, nil, ctx.ortho)
 	end
 
 	local mtx = ms( { type = "srt",	r = { 0, time, 0 } } , "1m" )	-- mtx on stack
-	local view = ms( { 0,1,-2.5 } , "*" , { 0,1,0 }, "lm")
+	local view = ms( { 0,1,-2.5 } , "*" , { 0,1,0 }, "lP")
 
-	bgfx.set_view_transform(hdrMesh, view, ~ctx.proj)
+	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
 
 	-- Render skybox into view hdrSkybox.
 	bgfx.set_texture(0, ctx.s_texCube, ctx.m_uffizi)

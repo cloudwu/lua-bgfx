@@ -136,7 +136,7 @@ local ScissorRect_state = bgfx.make_state {
 					BLEND = "ALPHA"
 				}
 
-local ms = math3d.new()
+local ms = util.mathstack
 local time = 0
 local function mainloop()
 	math3d.reset(ms)
@@ -148,19 +148,19 @@ local function mainloop()
 		bgfx.set_view_frame_buffer(RENDER_PASS_LIGHT_ID, ctx.m_lightBuffer)
 		bgfx.set_view_frame_buffer(RENDER_PASS_GEOMETRY_ID, ctx.m_gbuffer)
 
-		bgfx.set_view_transform(RENDER_PASS_GEOMETRY_ID, ~ctx.view, ~ctx.proj)
+		bgfx.set_view_transform(RENDER_PASS_GEOMETRY_ID, ctx.view, ctx.proj)
 
 		vp = ms(ctx.proj, ctx.view, "*P")
 
-		bgfx.set_view_transform(RENDER_PASS_LIGHT_ID, nil, ~ctx.ortho)
-		bgfx.set_view_transform(RENDER_PASS_COMBINE_ID, nil, ~ctx.ortho)
+		bgfx.set_view_transform(RENDER_PASS_LIGHT_ID, nil, ctx.ortho)
+		bgfx.set_view_transform(RENDER_PASS_COMBINE_ID, nil, ctx.ortho)
 
 		local size = 10
 		local aspectRatio = ctx.height / ctx.width
-		local o = ms( { type = "mat", ortho = true, l = -size, r = size, b = size * aspectRatio, t = -size * aspectRatio, n = 0, f = 1000 }, "m")
+		local o = ms( { type = "mat", ortho = true, l = -size, r = size, b = size * aspectRatio, t = -size * aspectRatio, n = 0, f = 1000 }, "P")
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_GBUFFER_ID, nil, o)
 
-		local o = ms( { type = "mat", ortho = true, l = 0, r = ctx.width, b = 0, t = ctx.height, n = 0, f = 1000 }, "m")
+		local o = ms( { type = "mat", ortho = true, l = 0, r = ctx.width, b = 0, t = ctx.height, n = 0, f = 1000 }, "P")
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_LIGHTS_ID, nil, o)
 	end
 
@@ -176,7 +176,7 @@ local function mainloop()
 			end
 			srt.t = { -offset + xx * 3, -offset + yy * 3, 0 }
 			-- Set transform for draw call.
-			bgfx.set_transform(ms (srt , "m"))
+			bgfx.set_transform(ms (srt , "P"))
 
 			-- Set vertex and index buffer.
 			bgfx.set_vertex_buffer(ctx.m_vbh)
@@ -319,7 +319,7 @@ local function mainloop()
 			local mtx = ms ( { type = "srt",
 				s = { aspectRatio, 1, 1 },
 				t = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 },
-			} , "m")
+			} , "P")
 
 			bgfx.set_transform(mtx)
 			bgfx.set_vertex_buffer(ctx.m_vbh)
