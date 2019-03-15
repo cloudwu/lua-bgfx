@@ -1,29 +1,35 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
 local bgfxu = require "bgfx.util"
+local util = require "util"
+local math3d = require "math3d"
 
-canvas = iup.canvas {}
-
-dlg = iup.dialog {
-  canvas,
-  title = "15-shadowmaps_simple",
-  size = "HALFxHALF",
+local ctx = {
+	canvas = iup.canvas {},
 }
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "15-shadowmaps_simple",
+	size = "HALFxHALF",
+}
+
+local ms = util.mathstack
 
 local RENDER_SHADOW_PASS_ID = 0
 local RENDER_SCENE_PASS_ID = 1
 
-local ctx = {}
+local vec0 = math3d.constant "identvec"
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	time = time + 0.01
 	bgfx.touch(0)
 
 --	Setup lights.
-	local lightPos = math3d.vector():pack(
+	local lightPos = ms:vector (
 		-math.cos(time),
 		-1,
 		-math.sin(time),
@@ -31,57 +37,37 @@ local function mainloop()
 	bgfx.set_uniform(ctx.u_lightPos, lightPos)
 
 --	Setup instance matrices.
-	local mtxFloor = math3d.matrix():srt(
-		30.0, 30.0, 30.0
-		,0.0, 0.0, 0.0
-		,0.0, 0.0, 0.0
-	)
+	local mtxFloor = ms:srtmat( {30.0, 30.0, 30.0}, nil, nil )
 
-	local mtxBunny = math3d.matrix():srt(
-		5,5,5
-		,0,math.pi - time, 0
-		,15,5,0
-	)
+	local mtxBunny = ms:srtmat( {5,5,5}, {0,math.pi - time, 0}, {15,5,0} )
 
-	local mtxHollowcube = math3d.matrix():srt(
-		2.5, 2.5, 2.5
-		, 0.0, 1.56 - time, 0.0
-		, 0.0, 10.0, 0.0
-	)
+	local mtxHollowcube = ms:srtmat( { 2.5, 2.5, 2.5 }, { 0.0, 1.56 - time, 0.0 }, { 0.0, 10.0, 0.0 } )
 
-	local mtxCube = math3d.matrix():srt(
-		2.5, 2.5, 2.5
-		, 0.0, 1.56 - time, 0.0
-		, -15.0, 5.0, 0.0
-	)
+	local mtxCube = ms:srtmat( { 2.5, 2.5, 2.5 }, { 0.0, 1.56 - time, 0.0 }, { -15.0, 5.0, 0.0 } )
 
 --	Define matrices.
-	local ex,ey,ez = lightPos:unpack()
-	local lightView = math3d.matrix():lookatp(-ex, -ey, -ez, 0,0,0)
+	local lightView = ms( vec0, lightPos, "-", vec0, "lP")
+
 	local area = 30.0
-	local lightProj = math3d.matrix():orthomat(-area, area, -area, area, -100.0, 100.0)
+	local lightProj = ms:matrix { type = "mat", ortho = true, l = -area, r = area, b = -area, t = area, n = -100, f = 100 }
 
 	bgfx.set_view_rect(RENDER_SHADOW_PASS_ID, 0, 0, ctx.m_shadowMapSize, ctx.m_shadowMapSize)
 	bgfx.set_view_frame_buffer(RENDER_SHADOW_PASS_ID, ctx.m_shadowMapFB)
 	bgfx.set_view_transform(RENDER_SHADOW_PASS_ID, lightView, lightProj)
 
 	bgfx.set_view_rect(RENDER_SCENE_PASS_ID, 0, 0, ctx.width, ctx.height)
-	bgfx.set_view_transform(RENDER_SCENE_PASS_ID, math3d.matrix "view", math3d.matrix "proj")
+	bgfx.set_view_transform(RENDER_SCENE_PASS_ID, ctx.view, ctx.proj)
 
 --	Clear backbuffer and shadowmap framebuffer at beginning.
 	bgfx.set_view_clear(RENDER_SHADOW_PASS_ID, "CD",0x303030ff, 1.0, 0)
 	bgfx.set_view_clear(RENDER_SCENE_PASS_ID, "CD",0x303030ff, 1.0, 0)
 
-	local mtxTmp = math3d.matrix():mul(lightProj, math3d.matrix "mtxCrop")
-	local mtxShadow = math3d.matrix():mul(lightView, mtxTmp)
+	local mtxTmp, mtxShadow, lightMtx = ms(ctx.mtxCrop, lightProj, "*1P", lightView, "*1P", mtxFloor, "*P")
 
 --	Floor.
-	local lightMtx = math3d.matrix():mul(mtxFloor, mtxShadow)
-	local cached = bgfx.set_transform(mtxFloor)
-
 	for pass =1, 2 do
 		local st = ctx.m_state[pass]
-		bgfx.set_transform(cached)
+		bgfx.set_transform(mtxFloor)
 		for _,texture in ipairs(st.textures) do
 			bgfx.set_texture(texture.stage, texture.sampler, texture.texture, texture.flags)
 		end
@@ -93,21 +79,21 @@ local function mainloop()
 	end
 
 --	Bunny.
-	lightMtx:mul(mtxBunny, mtxShadow)
+	lightMtx = ms(mtxShadow , mtxBunny, "*P")
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_bunny, ctx.m_state[1], mtxBunny)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_bunny, ctx.m_state[2], mtxBunny)
 
 --	Hollow cube.
-	lightMtx:mul(mtxHollowcube, mtxShadow)
+	lightMtx = ms(mtxShadow, mtxHollowcube, "*P")
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_hollowcube, ctx.m_state[1], mtxHollowcube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_hollowcube, ctx.m_state[2], mtxHollowcube)
 
 --	Cube.
-	lightMtx:mul(mtxCube, mtxShadow)
+	lightMtx = ms(mtxShadow, mtxCube, "*P")
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_cube, ctx.m_state[1], mtxCube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
@@ -116,13 +102,7 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
---		renderer = "OPENGL",
-	}
---	bgfx.set_debug "ST"
-
+function ctx.init()
 	-- Uniforms.
 	ctx.s_shadowMap = bgfx.create_uniform("s_shadowMap", "s")
 	ctx.u_lightPos  = bgfx.create_uniform("u_lightPos",  "v4")
@@ -132,12 +112,10 @@ local function init(canvas)
 --	adjust the depth range to be [0, 1] for writing to the color buffer
 	ctx.u_depthScaleOffset = bgfx.create_uniform("u_depthScaleOffset", "v4")
 
-	local depthScaleOffset = math3d.vector()
-
-	if ant.caps.homogeneousDepth then
-		bgfx.set_uniform(ctx.u_depthScaleOffset, depthScaleOffset:pack(1, 0, 0, 0))
+	if util.caps.homogeneousDepth then
+		bgfx.set_uniform(ctx.u_depthScaleOffset, ms:vector(1, 0, 0, 0))
 	else
-		bgfx.set_uniform(ctx.u_depthScaleOffset, depthScaleOffset:pack(0.5, 0.5, 0, 0))
+		bgfx.set_uniform(ctx.u_depthScaleOffset, ms:vector(0.5, 0.5, 0, 0))
 	end
 
 --	Create vertex stream declaration.
@@ -172,7 +150,7 @@ local function init(canvas)
 
 --	Shadow samplers are supported at least partially supported if texture
 --	compare less equal feature is supported.
-	ctx.m_shadowSamplerSupported = ant.caps.supported.TEXTURE_COMPARE_LEQUAL
+	ctx.m_shadowSamplerSupported = util.caps.supported.TEXTURE_COMPARE_LEQUAL
 
 	local shadowMapTexture
 	if ctx.m_shadowSamplerSupported then
@@ -246,46 +224,27 @@ local function init(canvas)
 		}},
 	}
 
-	local sy = ant.caps.originBottomLeft and 0.5 or -0.5
-	local sz = ant.caps.homogeneousDepth and 0.5 or 1
-	local tz = ant.caps.homogeneousDepth and 0.5 or 0
+	local sy = util.caps.originBottomLeft and 0.5 or -0.5
+	local sz = util.caps.homogeneousDepth and 0.5 or 1
+	local tz = util.caps.homogeneousDepth and 0.5 or 0
 
-	local mtxCrop = math3d.matrix "mtxCrop"
-	mtxCrop:pack(
+	ctx.mtxCrop = ms:ref "matrix" (
 		0.5, 0.0, 0.0, 0.0,
-		0.0,   sy, 0.0, 0.0,
-		0.0, 0.0, sz,   0.0,
-		0.5, 0.5, tz,   1.0
+		0.0,  sy, 0.0, 0.0,
+		0.0, 0.0,  sz, 0.0,
+		0.5, 0.5,  tz, 1.0
 	)
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(ctx.width,ctx.height, "vmx")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,30,-60, 0,5,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	ctx.view = ms:ref "matrix" (ms( { 0,30,-60 }, { 0,5,0 }, "lP"))
+	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  -- todo: destroy resources
-  ant.shutdown()
-end
+util.run(mainloop)
