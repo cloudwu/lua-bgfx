@@ -1,31 +1,36 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local MAX_WINDOWS = 8
 
-local canvas = iup.canvas{}
+local ctx = {
+	canvas = iup.canvas {},
+}
+
 local button = iup.button {
 	title = "New Window",
 }
 
 local dlg = iup.dialog {
 	iup.vbox {
-	  button,
-	  canvas,
+		button,
+		ctx.canvas,
 	},
-  title = "22-windows",
-  size = "HALFxHALF",
+	title = "22-windows",
+	size = "HALFxHALF",
 }
 
+local ms = util.mathstack
+
 local windows = {}
-local ctx = {}
 local time = 0
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
-	local mat = math3d.matrix()
 	time = time + 0.001
 
 	local views = {}
@@ -42,7 +47,7 @@ local function mainloop()
 	local count = 0
 	for yy = 0, 10 do
 		for xx = 0, 10 do
-			mat:rotmat(time + xx*0.21, time + yy*0.37):trans(-15.0 + xx * 3, -15.0 + yy * 3, 0)
+			local mat = ms:srtmat(nil, {time + xx*0.21, time + yy*0.37,0} , {-15.0 + xx * 3, -15.0 + yy * 3, 0})
 			bgfx.set_transform(mat)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -59,14 +64,8 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
---		renderer = "DIRECT3D12",
---		renderer = "OPENGL",
-	}
+function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
---	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_cubes", "fs_cubes")
 
@@ -90,35 +89,20 @@ local function init(canvas)
 	ctx.ib = bgfx.create_index_buffer{
 		0, 1, 2, 3, 7, 1, 5, 0, 4, 2, 6, 7, 4, 5,
 	}
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
-	if init then
-		init(self)
-		init = nil
-	end
+function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "v")
-	local viewmat = math3d.matrix "view"
-	local projmat = math3d.matrix "proj"
-	viewmat:lookatp(0,0,-35, 0,0,0)
-	projmat:projmat(60, ctx.width/ctx.height, 0.1, 100)
+	local viewmat = ms( { 0,0,-35 } , {0,0,0}, "lP" )
+	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
-dlg:showxy(iup.CENTER,iup.CENTER)
-dlg.usersize = nil
-
 local last_x, last_y
 local num_window = 0
-
 
 function dlg.close_cb()
 	for _,wnd in pairs(windows) do
@@ -145,9 +129,6 @@ local function new_window()
 			bgfx.set_view_frame_buffer(wnd.viewid)
 		end
 		bgfx.destroy(wnd.fbh)
-	end
-
-	function canvas:action()
 	end
 
 	function canvas:resize_cb(w,h)
@@ -177,10 +158,8 @@ local function new_window()
 		bgfx.set_view_rect(wnd.viewid, 0, 0, w, h)
 		bgfx.set_view_frame_buffer(wnd.viewid, wnd.fbh)
 
-		local viewmat = math3d.matrix()
-		local projmat = math3d.matrix()
-		viewmat:lookatp(0,0,-35, 0,0,0)
-		projmat:projmat(60, w/h, 0.1, 100)
+		local viewmat = ms( { 0,0,-35 }, { 0,0,0 }, "lP")
+		local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 		bgfx.set_view_transform(wnd.viewid, viewmat, projmat)
 	end
 
@@ -200,7 +179,7 @@ function button:action()
 			buttondefault = "1",
 			value = "Can't create more window",
 		})
-	elseif ant.caps.supported.SWAP_CHAIN then
+	elseif util.caps.supported.SWAP_CHAIN then
 		num_window = num_window + 1
 		new_window()
 	else
@@ -211,12 +190,7 @@ function button:action()
 	end
 end
 
--- to be able to run this script inside another context
-if (iup.MainLoopLevel()==0) then
-  iup.MainLoop()
-  iup.Close()
-  bgfx.destroy(ctx.vb)
-  bgfx.destroy(ctx.ib)
-  bgfx.destroy(ctx.prog)
-  ant.shutdown()
-end
+util.init(ctx)
+dlg:showxy(iup.CENTER,iup.CENTER)
+dlg.usersize = nil
+util.run(mainloop)

@@ -305,7 +305,7 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 
-	local viewmat = ms:matrix( ms( {0,0,-7}, {0,0,0} , "lP") )
+	local viewmat = ms( {0,0,-7}, {0,0,0} , "lP")
 	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 
