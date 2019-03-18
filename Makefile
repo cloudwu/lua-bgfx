@@ -28,10 +28,16 @@ $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
 $(ODIR)/luabgfxutil.o : luabgfxutil.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
 
-bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/ibcompress.o $(ODIR)/luabgfxutil.o
+bin :
+	mkdir $@
+
+bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/ibcompress.o $(ODIR)/luabgfxutil.o | bin
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
-all : bin/bgfx.dll
+bin/math3d.dll : | bin
+	cd math3d && $(MAKE) OUTPUT=../bin/
+
+all : bin/bgfx.dll bin/math3d.dll
 
 # all
 
@@ -39,4 +45,4 @@ $(ODIR) :
 	mkdir $@
 
 clean :
-	rm -rf $(ODIR) && rm -f *.dll
+	rm -rf $(ODIR) && rm -f bin/bgfx.dll bin/math3d.dll
