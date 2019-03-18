@@ -9,9 +9,9 @@ To build the library, you should build bgfx static library first, or you can dow
 
 I use [IUP](http://webserver2.tecgraf.puc-rio.br/iup/) for GUI framework, you can also download the [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) .
 
-To test it, just put `iup.exe` , `math3d.dll` , `bgfx.dll` in the same directory with the asserts (textures/shaders/meshes) from bgfx , and run :
+To test it, just put `lua.exe` , `math3d.dll` , `bgfx.dll` in the `bin` directory with the asserts (textures/shaders/meshes) from bgfx , and run :
 
-> iup.exe 00-helloworld.lua
+> bin/lua.exe 00-helloworld.lua
 
 bgfx Lua 封装
 =============
@@ -33,7 +33,7 @@ bgfx 已有一个 lua api binding ，但是我不太满意，所以自己重新�
 运行
 =====
 
-需要在源码当前目录运行 iup.exe 0x-xxx.lua ，资源目录 meshes/shaders/textures 必须在当前目录。它们是从 bgfx/examples/runtime 拷贝过来。
+需要在源码当前目录运行 bin/lua.exe 0x-xxx.lua ，资源目录 meshes/shaders/textures 必须在当前目录。它们是从 bgfx/examples/runtime 拷贝过来。
 
 iup 基于 https://github.com/cloudwu/iupmingw/ 编译，可以自己编译，也可以 [下载预编译好的版本](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) (windows 64bit)。
 
@@ -43,7 +43,7 @@ LICENSE
 The MIT License
 =====
 
-Copyright 2017 云风 cloudwu@gmail.com
+Copyright 2017-2019 云风 cloudwu@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
