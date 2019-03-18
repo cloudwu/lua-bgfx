@@ -1,7 +1,9 @@
-local ant = require "ant"
-local util = require "ant.util"
-local math3d = require "ant.math"
+package.cpath = "bin/?.dll"
+
+local iup = require "iuplua"
 local bgfx = require "bgfx"
+local util = require "util"
+local math3d = require "math3d"
 
 local RENDER_PASS_HIZ_ID            =0
 local RENDER_PASS_HIZ_DOWNSCALE_ID  =1
@@ -16,12 +18,16 @@ local RenderPass_All = 3
 local s_maxNoofProps = 10
 local s_maxNoofInstances = 2048
 
-local canvas = iup.canvas{}
+local ctx = {
+	canvas = iup.canvas {},
+}
 
-dlg = iup.dialog {
-  canvas,
-  title = "37-gpudrivenrendering",
-  size = "HALFxHALF",
+local ms = util.mathstack
+
+local dlg = iup.dialog {
+	ctx.canvas,
+	title = "37-gpudrivenrendering",
+	size = "HALFxHALF",
 }
 
 local s_cubeVertices = {
@@ -52,12 +58,10 @@ local s_cubeIndices = {
 }
 
 
-local ctx = {}
-
 local function renderOcclusionBufferPass()
 	-- Setup the occlusion pass projection
-	local projmat = math3d.matrix("m_occlusionProj", ctx)
-	projmat:projmat(60, ctx.m_hiZwidth/ctx.m_hiZheight, 0.1, 500)
+	local projmat = ctx.m_occlusionProj
+	projmat { type = "mat", fov = 60, aspect = ctx.m_hiZwidth/ctx.m_hiZheight, n = 0.1, f = 500 }
 	bgfx.set_view_transform(RENDER_PASS_HIZ_ID, ctx.m_mainView, projmat)
 
 	bgfx.set_view_frame_buffer(RENDER_PASS_HIZ_ID, ctx.m_hiZDepthBuffer)
@@ -101,10 +105,9 @@ local function renderDownscalePass()
 	local width = ctx.m_hiZwidth
 	local height = ctx.m_hiZheight
 
-	local inputRendertargetSize = math3d.vector()
 	for i = 1, ctx.m_noofHiZMips do
 		local coordinateScale = i > 1 and 2.0 or 1.0
-		inputRendertargetSize:pack( width, height, coordinateScale, coordinateScale)
+		local inputRendertargetSize = ms:vector( width, height, coordinateScale, coordinateScale)
 		bgfx.set_uniform(ctx.u_inputRTSize, inputRendertargetSize)
 
 		if i > 1 then
@@ -134,11 +137,11 @@ local function renderOccludePropsPass()
 	bgfx.set_buffer(2, ctx.m_drawcallInstanceCounts, "w")
 	bgfx.set_buffer(3, ctx.m_instancePredicates, "w")
 
-	bgfx.set_uniform(ctx.u_inputRTSize, math3d.vector():pack(ctx.m_hiZwidth, ctx.m_hiZheight, 1 / ctx.m_hiZwidth, 1/ctx.m_hiZheight))
+	bgfx.set_uniform(ctx.u_inputRTSize, ms:vector(ctx.m_hiZwidth, ctx.m_hiZheight, 1 / ctx.m_hiZwidth, 1/ctx.m_hiZheight))
 
 	-- store a rounded-up, power of two instance count for the stream compaction step
 	local noofInstancesPowOf2 = 2 ^ (math.floor(math.log(ctx.m_totalInstancesCount) / math.log(2) ) + 1)
-	local cullingConfig = math3d.vector():pack( ctx.m_totalInstancesCount, noofInstancesPowOf2 , ctx.m_noofHiZMips, ctx.m_noofProps )
+	local cullingConfig = ms:vector( ctx.m_totalInstancesCount, noofInstancesPowOf2 , ctx.m_noofHiZMips, ctx.m_noofProps )
 	bgfx.set_uniform(ctx.u_cullingConfig, cullingConfig)
 
 	--set the view/projection transforms so that the compute shader can receive the viewProjection matrix automagically
@@ -195,15 +198,15 @@ local function renderMainPass()
 end
 
 local function mainloop()
-	math3d.reset()
+	math3d.reset(ms)
 	bgfx.touch(0)
 
 	-- todo: support mouse
-	local mainview = math3d.matrix("m_mainView", ctx)
-	mainview:lookatp(50,20,65, 0,0,0)
+	local mainview = ctx.m_mainView
+	mainview( ms( {50,20,65}, {0,0,0}, "lP") )
 
-	local mainproj = math3d.matrix("m_mainProj", ctx)
-	mainproj:projmat(60, ctx.m_width / ctx.m_height, 0.1, 500)
+	local mainproj = ctx.m_mainProj
+	mainproj { type = "mat", fov = 60, aspect = ctx.m_width / ctx.m_height, n = 0.1, f = 500 }
 
 	-- submit drawcalls for all passes
 	renderOcclusionBufferPass()
@@ -214,10 +217,13 @@ local function mainloop()
 	bgfx.frame()
 end
 
-local function init(canvas)
-	ant.init {
-		nwh = iup.GetAttributeData(canvas,"HWND"),
-	}
+function ctx.init(w,h)
+	-- find largest pow of two dims less than backbuffer size
+	ctx.m_hiZwidth  = 2 ^ math.floor(math.log(w,2))
+	ctx.m_hiZheight = 2 ^ math.floor(math.log(h,2))
+	ctx.m_mainView = ms:ref "matrix"
+	ctx.m_mainProj = ms:ref "matrix"
+	ctx.m_occlusionProj = ms:ref "matrix"
 
 	ctx.vdecl = bgfx.vertex_decl {
 		{ "POSITION", 3, "FLOAT" },
@@ -249,12 +255,11 @@ local function init(canvas)
 		prop.m_indexbufferHandle = bgfx.create_index_buffer(prop.m_indices)
 	end
 
-	local temp = math3d.vector()
 	local function minmax(inst)
-		temp:pack(-0.5, -0.5, -0.5, 1.0)
-		math3d.vector("m_bboxMin", inst):mul(temp, inst.m_world)
-		temp:pack(0.5, 0.5, 0.5, 1.0)
-		math3d.vector("m_bboxMax", inst):mul(temp, inst.m_world)
+		local temp = ms:vector(-0.5, -0.5, -0.5, 1.0)
+		inst.m_bboxMin = ms:ref "vector" ( ms(inst.m_world, temp, "*P") )
+		local temp = ms:vector(0.5, 0.5, 0.5, 1.0)
+		inst.m_bboxMax = ms:ref "vector" ( ms(inst.m_world, temp, "*P") )
 	end
 
 	-- add a ground plane
@@ -270,17 +275,13 @@ local function init(canvas)
 		local inst = {}
 		prop.m_instances = { inst }
 
-		math3d.matrix("m_world", inst):srt(
-					100.0, 0.1, 100.0
-					, 0.0, 0.0, 0.0
-					, 0.0, 0.0, 0.0
-				)
+		inst.m_world = ms:ref "matrix" (ms:srtmat ( { 100.0, 0.1, 100.0 }, nil, nil ) )
 
 		minmax(inst)
 
 		ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 		prop.m_materialID = ctx.m_noofMaterials
-		math3d.vector(prop.m_materialID, ctx.m_materials):pack(0,0.6,0,1)
+		ctx.m_materials[prop.m_materialID] = ms:ref "vector" (0,0.6,0,1)
 
 		ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 	end
@@ -300,11 +301,9 @@ local function init(canvas)
 			local inst = {}
 			table.insert(prop.m_instances, inst)
 			-- calculate world position
-			math3d.matrix("m_world", inst):srt(
-				40.0, 10.0, 0.1
-				, 0.0, ( math.random() * 120.0 - 60.0) * 3.1459 / 180.0, 0.0
-				, math.random() * 100.0 - 50.0, 5.0, math.random() * 100.0 - 50.0
-			)
+			inst.m_world = ms:ref "matrix" (ms:srtmat( { 40.0, 10.0, 0.1 },
+				{ 0.0, ( math.random() * 120.0 - 60.0) * 3.1459 / 180.0, 0.0 },
+				{ math.random() * 100.0 - 50.0, 5.0, math.random() * 100.0 - 50.0 }) )
 
 			minmax(inst)
 		end
@@ -313,7 +312,7 @@ local function init(canvas)
 		ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 		prop.m_materialID = ctx.m_noofMaterials
 		--add a "material" for this prop
-		math3d.vector(prop.m_materialID, ctx.m_materials):pack(0,0,1,0)
+		ctx.m_materials[prop.m_materialID] = ms:ref "vector" (0,0,1,0)
 
 		ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 	end
@@ -333,18 +332,17 @@ local function init(canvas)
 			for i = 1, prop.m_noofInstances do
 				local inst = {}
 				table.insert(prop.m_instances, inst)
-				math3d.matrix("m_world", inst):srt(
-					2.0, 2.0, 2.0
-					, 0.0, 0.0, 0.0
-					, math.random() * 100.0 - 50.0, 1.0, math.random() * 100.0 - 50.0
-				)
+				inst.m_world = ms:ref "matrix" (ms:srtmat(
+					{ 2.0, 2.0, 2.0 },
+					nil,
+					{math.random() * 100.0 - 50.0, 1.0, math.random() * 100.0 - 50.0}))
 
 				minmax(inst)
 			end
 
 			ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 			prop.m_materialID = ctx.m_noofMaterials
-			math3d.vector(prop.m_materialID, ctx.m_materials):pack(1,1,0,1)
+			ctx.m_materials[prop.m_materialID] = ms:ref "vector" (1,1,0,1)
 			ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 		end
 
@@ -360,18 +358,17 @@ local function init(canvas)
 			for i = 1, prop.m_noofInstances do
 				local inst = {}
 				table.insert(prop.m_instances, inst)
-				math3d.matrix("m_world", inst):srt(
-					2.0, 4.0, 2.0
-					, 0.0, 0.0, 0.0
-					, math.random() * 100.0 - 50.0, 2.0, math.random() * 100.0 - 50.0
-				)
+				inst.m_world = ms:ref "matrix"( ms:srtmat (
+					{ 2.0, 4.0, 2.0 },
+					nil,
+					{ math.random() * 100.0 - 50.0, 2.0, math.random() * 100.0 - 50.0 }))
 
 				minmax(inst)
 			end
 
 			ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 			prop.m_materialID = ctx.m_noofMaterials
-			math3d.vector(prop.m_materialID, ctx.m_materials):pack(1,0,0,1)
+			ctx.m_materials[prop.m_materialID] = ms:ref "vector" (1,0,0,1)
 			ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 		end
 	end
@@ -455,7 +452,7 @@ local function init(canvas)
 		ctx.m_indirectBuffer = bgfx.create_indirect_buffer(#ctx.m_props)
 
 		-- Create programs from shaders for occlusion pass.
-		ctx.m_programOcclusionPass    = util.programLoad("vs_gdr_render_occlusion")
+		ctx.m_programOcclusionPass    = util.programLoad "vs_gdr_render_occlusion"
 		ctx.m_programDownscaleHiZ     = util.computeLoad "cs_gdr_downscale_hi_z"
 		ctx.m_programOccludeProps     = util.computeLoad "cs_gdr_occlude_props"
 		ctx.m_programStreamCompaction = util.computeLoad "cs_gdr_stream_compaction"
@@ -525,11 +522,9 @@ local function init(canvas)
 	ctx.s_texOcclusionDepthIn = bgfx.create_uniform("s_texOcclusionDepthIn", "s")
 
 	ctx.m_OcclusionIB = bgfx.instance_buffer "mvv"
-
-	ant.mainloop(mainloop)
 end
 
-function canvas:resize_cb(w,h)
+function ctx.resize(w,h)
 	ctx.m_width = w
 	ctx.m_height = h
 
@@ -537,20 +532,10 @@ function canvas:resize_cb(w,h)
 	ctx.m_hiZwidth  = 2 ^ math.floor(math.log(w,2))
 	ctx.m_hiZheight = 2 ^ math.floor(math.log(h,2))
 
-	if init then
-		init(self)
-		init = nil
-	end
 	bgfx.reset(w,h,"v")
 end
 
-function canvas:action(x,y)
-	mainloop()
-end
-
+util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
-
-iup.MainLoop()
-iup.Close()
-ant.shutdown()
+util.run(mainloop)

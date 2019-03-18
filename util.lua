@@ -274,15 +274,14 @@ function util.init(args)
 		init_shader_path(util.caps)
 		init_flag = true
 		bgfx.set_debug "T"
-
-		if args.init then
-			args.init()
-		end
 	end
 
 	function canvas:resize_cb(w,h)
 		if init_flag == nil then
 			init()
+			if args.init then
+				args.init(w,h)
+			end
 			init_flag = true
 		end
 		if args.resize then
