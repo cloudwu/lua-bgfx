@@ -185,7 +185,7 @@ local function renderMainPass()
 	bgfx.set_state()
 
 	-- Set "material" data (currently a colour only)
-	bgfx.set_uniform(ctx.u_colour, table.unpack(ctx.m_materials))
+	bgfx.set_uniform(ctx.u_color, table.unpack(ctx.m_materials))
 
 	-- Set vertex and index buffer.
 	bgfx.set_vertex_buffer(0, ctx.m_allPropsVertexbufferHandle)
@@ -232,7 +232,8 @@ function ctx.init(w,h)
 	-- create uniforms
 	ctx.u_inputRTSize   = bgfx.create_uniform("u_inputRTSize", "v4")
 	ctx.u_cullingConfig = bgfx.create_uniform("u_cullingConfig", "v4")
-	ctx.u_colour        = bgfx.create_uniform("u_colour", "v4")
+	ctx.u_color        = bgfx.create_uniform("u_color", "v4", 32)
+	ctx.s_texOcclusionDepth = bgfx.create_uniform("s_texOcclusionDepth", "s")
 
 	-- create props
 	ctx.m_totalInstancesCount = 0
@@ -255,11 +256,11 @@ function ctx.init(w,h)
 		prop.m_indexbufferHandle = bgfx.create_index_buffer(prop.m_indices)
 	end
 
+	local temp1 = ms:vector(-0.5, -0.5, -0.5, 1.0)
+	local temp2 = ms:vector(0.5, 0.5, 0.5, 1.0)
 	local function minmax(inst)
-		local temp = ms:vector(-0.5, -0.5, -0.5, 1.0)
-		inst.m_bboxMin = ms:ref "vector" ( ms(inst.m_world, temp, "*P") )
-		local temp = ms:vector(0.5, 0.5, 0.5, 1.0)
-		inst.m_bboxMax = ms:ref "vector" ( ms(inst.m_world, temp, "*P") )
+		inst.m_bboxMin = ms:ref "vector" ( ms(inst.m_world, temp1, "*P") )
+		inst.m_bboxMax = ms:ref "vector" ( ms(inst.m_world, temp2, "*P") )
 	end
 
 	-- add a ground plane
@@ -453,6 +454,7 @@ function ctx.init(w,h)
 
 		-- Create programs from shaders for occlusion pass.
 		ctx.m_programOcclusionPass    = util.programLoad "vs_gdr_render_occlusion"
+		ctx.m_programCopyZ            = util.programLoad "cs_gdr_copy_z"
 		ctx.m_programDownscaleHiZ     = util.computeLoad "cs_gdr_downscale_hi_z"
 		ctx.m_programOccludeProps     = util.computeLoad "cs_gdr_occlude_props"
 		ctx.m_programStreamCompaction = util.computeLoad "cs_gdr_stream_compaction"
