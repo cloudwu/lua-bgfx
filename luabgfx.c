@@ -14,7 +14,7 @@
 #include "luabgfx.h"
 #include "simplelock.h"
 
-#if BGFX_API_VERSION != 97
+#if BGFX_API_VERSION != 99
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -1972,10 +1972,11 @@ create_from_table_decl(lua_State *L, int idx, bgfx_vertex_decl_t *vd) {
 static const bgfx_memory_t *
 create_from_table_int16(lua_State *L, int idx) {
 	luaL_checktype(L, idx, LUA_TTABLE);
-	if (lua_geti(L, idx, 1) != LUA_TNUMBER) {
-		lua_pop(L, 1);
+	int idxtype = lua_geti(L, idx, 1);
+	lua_pop(L, 1);
+	if (idxtype != LUA_TNUMBER) 		
 		return create_mem_from_table(L, idx, 1, NULL, NULL);
-	}
+
 	int n = lua_rawlen(L, idx);
 	const bgfx_memory_t *mem = bgfx_alloc(n * sizeof(uint16_t));
 	int i;
@@ -1991,10 +1992,11 @@ create_from_table_int16(lua_State *L, int idx) {
 static const bgfx_memory_t *
 create_from_table_int32(lua_State *L, int idx) {
 	luaL_checktype(L, idx, LUA_TTABLE);
-	if (lua_geti(L, idx, 1) != LUA_TNUMBER) {
-		lua_pop(L, 1);
+	int idxtype = lua_geti(L, idx, 1);
+	lua_pop(L, 1);
+	if (idxtype != LUA_TNUMBER)
 		return create_mem_from_table(L, idx, 1, NULL, NULL);
-	}
+
 	int n = lua_rawlen(L, idx);
 	const bgfx_memory_t *mem = bgfx_alloc(n * sizeof(uint32_t));
 	int i;
@@ -2363,41 +2365,6 @@ lcreateDynamicIndexBuffer(lua_State *L) {
 	} else {
 		lua_pushinteger(L, BGFX_LUAHANDLE(DYNAMIC_INDEX_BUFFER, handle));
 	}
-	return 1;
-}
-
-// from ibcompress.cpp
-uint16_t create_compressed_ib(uint32_t num, uint32_t csize, const void * src);
-
-/*
-	integer num
-	string data
-	integer start
-	integer end
- */
-static int
-lcreateIndexBufferCompress(lua_State *L) {
-	uint32_t num = (uint32_t)luaL_checkinteger(L, 1);
-	size_t sz = 0;
-	const char * data = luaL_checklstring(L, 2, &sz);
-	int start = luaL_optinteger(L, 3, 1);
-	int end = luaL_optinteger(L, 4, -1);
-	if (start < 0) {
-		start = sz + start + 1;
-	}
-	if (end < 0) {
-		end = sz + end + 1;
-	}
-	if (end < start)
-		luaL_error(L, "empty compressed data");
-	int s = end - start + 1;
-	data += start - 1;
-	uint16_t id = create_compressed_ib(num, s, data);
-	bgfx_index_buffer_handle_t handle = { id };
-	if (invalid_handle(handle)) {
-		return luaL_error(L, "create index buffer failed");
-	}
-	lua_pushinteger(L, BGFX_LUAHANDLE(INDEX_BUFFER, handle));
 	return 1;
 }
 
@@ -4055,10 +4022,12 @@ lgetShaderUniforms(lua_State *L) {
 	uint16_t n = bgfx_get_shader_uniforms(shader, NULL, 0);
 	lua_createtable(L, n, 0);
 	bgfx_uniform_handle_t u[V(n)];
-	bgfx_get_shader_uniforms(shader, u, n);
-	int i;
-	for (i=0;i<n;i++) {
-		int id = BGFX_LUAHANDLE(UNIFORM, u[i]);
+	bgfx_get_shader_uniforms(shader, u, n);	
+	for (int i=0;i<n;i++) {
+		const bgfx_uniform_handle_t handle = u[i];
+		bgfx_uniform_info_t info;
+		bgfx_get_uniform_info(handle, &info);
+		const int id = BGFX_LUAHANDLE_WITHTYPE(BGFX_LUAHANDLE(UNIFORM, handle), info.type);
 		lua_pushinteger(L, id);
 		lua_rawseti(L, -2, i+1);
 	}
@@ -4220,7 +4189,6 @@ luaopen_bgfx(lua_State *L) {
 		{ "create_dynamic_vertex_buffer", lcreateDynamicVertexBuffer },
 		{ "create_index_buffer", lcreateIndexBuffer },
 		{ "create_dynamic_index_buffer", lcreateDynamicIndexBuffer },
-		{ "create_index_buffer_compress", lcreateIndexBufferCompress },
 		{ "set_vertex_buffer", lsetVertexBuffer },
 		{ "set_index_buffer", lsetIndexBuffer },
 		{ "destroy", ldestroy },

@@ -19,9 +19,6 @@ BGFXINC = -I$(BGFXSRC)/include -I$(BXSRC)/include/compat/mingw -I$(BXSRC)/includ
 BGFXUTILLIB = -lexample-common$(BGFXVER)
 BGFX3RDINC = -I$(BGFXSRC)/3rdparty
 
-$(ODIR)/ibcompress.o : ibcompress.cpp | $(ODIR)
-	$(CXX) $(CFLAGS) -std=c++11 -c -o $@ $^ $(BGFXINC) $(BGFX3RDINC)
-
 $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
 
@@ -31,7 +28,7 @@ $(ODIR)/luabgfxutil.o : luabgfxutil.c  | $(ODIR)
 bin :
 	mkdir $@
 
-bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/ibcompress.o $(ODIR)/luabgfxutil.o | bin
+bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o | bin
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
 bin/math3d.dll : | bin
