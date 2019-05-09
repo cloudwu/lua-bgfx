@@ -16,8 +16,9 @@ all :
 BGFXVER = Release
 BGFXLIB = -L$(BGFXSRC)/.build/win64_mingw-gcc/bin -lbgfx$(BGFXVER) -lbimg$(BGFXVER) -lbx$(BGFXVER) -lstdc++ -lgdi32 -lpsapi -luuid
 BGFXINC = -I$(BGFXSRC)/include -I$(BXSRC)/include/compat/mingw -I$(BXSRC)/include
-BGFXUTILLIB = -lexample-common$(BGFXVER)
 BGFX3RDINC = -I$(BGFXSRC)/3rdparty
+BGFXUTILLIB = -lexample-common$(BGFXVER)
+BGFXUTILINC = $(BGFX3RDINC) -I$(BGFXSRC)/examples/common
 
 $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
@@ -25,10 +26,13 @@ $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
 $(ODIR)/luabgfxutil.o : luabgfxutil.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
 
+$(ODIR)/luabgfximgui.o : luabgfximgui.cpp  | $(ODIR)
+	$(CXX) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC) $(BGFXUTILINC)
+
 bin :
 	mkdir $@
 
-bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o | bin
+bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o $(ODIR)/luabgfximgui.o | bin
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
 bin/math3d.dll : | bin
