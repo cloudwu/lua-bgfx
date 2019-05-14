@@ -29,7 +29,6 @@ function imgui.init(args)
 	attribs.scroll = 0
 	attribs.width = args.width
 	attribs.height = args.height
-	attribs.input_char = 0
 	attribs.viewid = args.imgui_view or 255
 
 	local canvas = assert(args.canvas)
@@ -82,7 +81,6 @@ function imgui.updatefunc(f, mainloop)
 			attribs.scroll,
 			attribs.width,
 			attribs.height,
-			attribs.input_char,
 			attribs.viewid
 		)
 		local ok , err = xpcall(f, debug.traceback)
