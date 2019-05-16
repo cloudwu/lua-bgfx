@@ -4245,5 +4245,9 @@ luaopen_bgfx(lua_State *L) {
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
+
+	lua_pushlightuserdata(L, bgfx_get_interface);
+	lua_setfield(L, LUA_REGISTRYINDEX, "BGFX_GET_INTERFACE");
+
 	return 1;
 }
