@@ -21,7 +21,7 @@ BGFXUTILLIB = -lexample-common$(BGFXVER)
 BGFXUTILINC = $(BGFX3RDINC) -I$(BGFXSRC)/examples/common
 
 $(ODIR)/luabgfx.o : luabgfx.c  | $(ODIR)
-	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
+	$(CC) $(CFLAGS) -c -DBGFX_STATIC_LINK -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)
 
 $(ODIR)/luabgfxutil.o : luabgfxutil.c  | $(ODIR)
 	$(CC) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC)

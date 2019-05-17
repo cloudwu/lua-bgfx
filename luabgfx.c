@@ -13,6 +13,7 @@
 
 #include "luabgfx.h"
 #include "simplelock.h"
+#include "bgfx_interface.h"
 
 #if BGFX_API_VERSION != 99
 #   error BGFX_API_VERSION mismatch
@@ -39,8 +40,6 @@
 #define MAX_SCREENSHOT 16
 // 64K log ring buffer
 #define MAX_LOGBUFFER (64*1024)
-
-#define BGFX(api) bgfx_##api
 
 struct screenshot {
 	uint32_t width;
@@ -4138,6 +4137,8 @@ lgetLog(lua_State *L) {
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
+	init_interface(L);
+
 	int tfn = sizeof(c_texture_formats) / sizeof(c_texture_formats[0]);
 	lua_createtable(L, 0, tfn);
 	int i;
@@ -4243,9 +4244,5 @@ luaopen_bgfx(lua_State *L) {
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
-
-	lua_pushlightuserdata(L, bgfx_get_interface);
-	lua_setfield(L, LUA_REGISTRYINDEX, "BGFX_GET_INTERFACE");
-
 	return 1;
 }
