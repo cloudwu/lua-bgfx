@@ -62,10 +62,10 @@ lendFrame(lua_State *L) {
 
 static ImGuiCond
 get_cond(lua_State *L, int index) {
-	int t = lua_type(L, 2);
+	int t = lua_type(L, index);
 	switch (t) {
 	case LUA_TSTRING: {
-		const char *cond = lua_tostring(L, 2);
+		const char *cond = lua_tostring(L, index);
 		switch(cond[0]) {
 		case 'a':
 		case 'A':
@@ -1271,8 +1271,8 @@ wMenuItem(lua_State *L) {
 static int
 wBeginListBox(lua_State *L) {
 	const char *label = luaL_checkstring(L, INDEX_ID);
-	int width = luaL_optinteger(L, 2, 0);
-	int height = luaL_optinteger(L, 3, 0);
+	float width = luaL_optnumber(L, 2, 0);
+	float height = luaL_optnumber(L, 3, 0);
 	bool change = ImGui::ListBoxHeader(label, ImVec2(width, height));
 	lua_pushboolean(L, change);
 	return 1;
@@ -1369,8 +1369,8 @@ winEnd(lua_State *L) {
 static int
 winBeginChild(lua_State *L) {
 	const char * id = luaL_checkstring(L, INDEX_ID);
-	float width = luaL_optinteger(L, 2, 0);
-	float height = luaL_optinteger(L, 3, 0);
+	float width = luaL_optnumber(L, 2, 0);
+	float height = luaL_optnumber(L, 3, 0);
 	bool border = lua_toboolean(L, 4);
 	ImGuiWindowFlags flags = luaL_optinteger(L, 5, 0);
 	bool change = ImGui::BeginChild(id, ImVec2(width, height), border, flags);
@@ -1533,11 +1533,11 @@ winSetScrollFromPosY(lua_State *L) {
 
 static int
 winSetNextWindowPos(lua_State *L) {
-	float x = luaL_checkinteger(L, 1);
-	float y = luaL_checkinteger(L, 2);
+	float x = luaL_checknumber(L, 1);
+	float y = luaL_checknumber(L, 2);
 	ImGuiCond cond = get_cond(L, 3);
-	float px = luaL_optinteger(L, 4, 0);
-	float py = luaL_optinteger(L, 5, 0);
+	float px = luaL_optnumber(L, 4, 0);
+	float py = luaL_optnumber(L, 5, 0);
 	ImGui::SetNextWindowPos(ImVec2(x,y), cond, ImVec2(px,py));
 	return 0;
 }
