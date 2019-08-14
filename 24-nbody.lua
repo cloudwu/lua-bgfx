@@ -273,7 +273,7 @@ function ctx.init()
 	-- Set view 0 clear state.
 	bgfx.set_view_clear(0, "CD", 0x303030ff , 1.0 , 0)
 
-	local quadVertexDecl = bgfx.vertex_decl {
+	local quadVertexDecl = bgfx.vertex_layout {
 		{ "POSITION", 2, "FLOAT" },
 	}
 
@@ -293,7 +293,7 @@ function ctx.init()
 	ctx.m_particleProgram = util.programLoad("vs_particle", "fs_particle")
 
 	-- Setup compute buffers
-	local computeVertexDecl = bgfx.vertex_decl {
+	local computeVertexDecl = bgfx.vertex_layout {
 		{ "TEXCOORD0", 4, "FLOAT" },
 	}
 

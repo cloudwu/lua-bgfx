@@ -537,7 +537,7 @@ function ctx.init()
 --	bgfx.set_debug "ST"
 
 	ctx.prog = util.programLoad("vs_metaballs", "fs_metaballs")
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },

@@ -119,7 +119,7 @@ function ctx.init()
 	end
 
 --	Create vertex stream declaration.
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 4, "UINT8", true, true },
 	}

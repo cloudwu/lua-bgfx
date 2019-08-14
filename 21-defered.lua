@@ -342,19 +342,19 @@ function ctx.init()
 	bgfx.set_view_clear_mrt(RENDER_PASS_LIGHT_ID , "CD"	, 1.0, 0, 0	)
 
 	-- Create vertex stream declaration.
-	ctx.PosNormalTangentTexcoordVertex = bgfx.vertex_decl {
+	ctx.PosNormalTangentTexcoordVertex = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 4, "UINT8", true, true },
 		{ "TANGENT", 4, "UINT8", true, true },
 		{ "TEXCOORD0", 2, "INT16", true, true },
 	}
 
-	ctx.PosTexCoord0Vertex = bgfx.vertex_decl {
+	ctx.PosTexCoord0Vertex = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "TEXCOORD0", 2, "FLOAT" },
 	}
 
-	ctx.DebugVertex = bgfx.vertex_decl {
+	ctx.DebugVertex = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },
 	}

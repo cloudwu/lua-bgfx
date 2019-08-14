@@ -295,7 +295,7 @@ local function mainloop()
 end
 
 function ctx.init()
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION",  3, "FLOAT" },
 		{ "COLOR0",    4, "UINT8", true },
 		{ "TEXCOORD0", 2, "FLOAT" },

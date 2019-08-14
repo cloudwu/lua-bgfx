@@ -653,7 +653,7 @@ end
 function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION",  3, "FLOAT" },
 		{ "NORMAL",    4, "UINT8", true, true },
 		{ "TEXCOORD0", 2, "FLOAT" },

@@ -59,7 +59,7 @@ function ctx.init()
 	bgfx.set_view_clear(0, "CD", 0x303030ff, 1, 0)
 
 	ctx.prog = util.programLoad("vs_instancing", "fs_instancing")
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },
 	}

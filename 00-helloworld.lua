@@ -264,7 +264,7 @@ local ctx = {
 
 local dlg = iup.dialog {
 	ctx.canvas,
-	title = "01-helloworld",
+	title = "00-helloworld",
 	size = "HALFxHALF",
 }
 

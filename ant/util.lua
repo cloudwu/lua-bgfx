@@ -94,7 +94,7 @@ do
 	mesh_decode["VB \1"] = function(mesh, group, data, offset)
 		offset = read_mesh_header(mesh, data, offset)
 		local stride, numVertices
-		mesh.vdecl, stride, offset = bgfx.vertex_decl(data, offset)
+		mesh.vdecl, stride, offset = bgfx.vertex_layout(data, offset)
 		numVertices, offset = string.unpack("<I2", data, offset)
 		vb_data[2] = data
 		vb_data[3] = offset

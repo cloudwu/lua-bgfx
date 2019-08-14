@@ -83,7 +83,7 @@ function ctx.init()
 
 	ctx.m_program = util.programLoad("vs_cubes", "fs_cubes")
 
-	ctx.VertexDecl = bgfx.vertex_decl {
+	ctx.VertexDecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },
 	}

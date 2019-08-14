@@ -2009,13 +2009,13 @@ function ctx.init()
 
 	init_Programs()
 
-	ctx.PosNormalTexcoordDecl = bgfx.vertex_decl {
+	ctx.PosNormalTexcoordDecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "NORMAL", 4, "UINT8", true, true },
 		{ "TEXCOORD0", 2, "FLOAT" },
 	}
 
-	ctx.PosColorTexCoord0Vertex = bgfx.vertex_decl {
+	ctx.PosColorTexCoord0Vertex = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },
 		{ "TEXCOORD0", 2, "FLOAT" },
@@ -2023,7 +2023,7 @@ function ctx.init()
 
 	ctx.color_tb = bgfx.transient_buffer "fffdff"
 
-	ctx.posDecl = bgfx.vertex_decl {
+	ctx.posDecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 	}
 

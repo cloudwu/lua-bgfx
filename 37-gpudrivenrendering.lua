@@ -225,7 +225,7 @@ function ctx.init(w,h)
 	ctx.m_mainProj = ms:ref "matrix"
 	ctx.m_occlusionProj = ms:ref "matrix"
 
-	ctx.vdecl = bgfx.vertex_decl {
+	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
 	}
 
@@ -390,7 +390,7 @@ function ctx.init(w,h)
 		ctx.m_instancePredicates = bgfx.create_dynamic_index_buffer(s_maxNoofInstances, "rw")
 		--bounding box for each instance, will be fed to the compute shader to calculate occlusion
 		do
-			local computeVertexDecl = bgfx.vertex_decl {
+			local computeVertexDecl = bgfx.vertex_layout {
 				{ "TEXCOORD0", 4, "FLOAT" },
 			}
 			-- initialise the buffer with the bounding boxes of all instances
@@ -419,7 +419,7 @@ function ctx.init(w,h)
 
 		-- pre and post occlusion culling instance data buffers
 		do
-			local instanceBufferVertexDecl = bgfx.vertex_decl {
+			local instanceBufferVertexDecl = bgfx.vertex_layout {
 				{ "TEXCOORD0", 4, "FLOAT" },
 				{ "TEXCOORD1", 4, "FLOAT" },
 				{ "TEXCOORD2", 4, "FLOAT" },

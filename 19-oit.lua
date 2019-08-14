@@ -204,12 +204,12 @@ local function mainloop()
 end
 
 function ctx.init()
-	ctx.PosColorVertex = bgfx.vertex_decl {
+	ctx.PosColorVertex = bgfx.vertex_layout {
 		{ "POSITION",  3, "FLOAT" },
 		{ "COLOR0",    4, "UINT8", true },
 	}
 
-	ctx.PosColorTexCoord0Vertex = bgfx.vertex_decl {
+	ctx.PosColorTexCoord0Vertex = bgfx.vertex_layout {
 		{ "POSITION",  3, "FLOAT" },
 		{ "COLOR0",    4, "UINT8", true },
 		{ "TEXCOORD0", 2, "FLOAT" },
