@@ -14,8 +14,9 @@
 #include "luabgfx.h"
 #include "simplelock.h"
 #include "bgfx_interface.h"
+#include "bgfx_alloc.h"
 
-#if BGFX_API_VERSION != 101
+#if BGFX_API_VERSION != 102
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -446,6 +447,10 @@ linit(lua_State *L) {
 		init.platformData.context = getfield(L, "context");
 		init.platformData.backBuffer = getfield(L, "backBuffer");
 		init.platformData.backBufferDS = getfield(L, "backBufferDS");
+
+		//if (init.debug) {
+			luabgfx_getalloc(&init.allocator);
+		//}
 	}
 
 	if (!BGFX(init)(&init)) {
@@ -833,9 +838,9 @@ lgetStats(lua_State *L) {
 			lua_setfield(L, -2, "name");
 			lua_pushinteger(L, stat->viewStats[i].view);
 			lua_setfield(L, -2, "view");
-			lua_pushnumber(L, stat->viewStats[i].cpuTimeElapsed * cpums);
+			lua_pushnumber(L, (stat->viewStats[i].cpuTimeEnd - stat->viewStats[i].cpuTimeBegin) * cpums);
 			lua_setfield(L, -2, "cpu");
-			lua_pushnumber(L, stat->viewStats[i].gpuTimeElapsed * gpums);
+			lua_pushnumber(L, (stat->viewStats[i].gpuTimeEnd - stat->viewStats[i].gpuTimeBegin) * gpums);
 			lua_setfield(L, -2, "gpu");
 			lua_pop(L, 1);
 		}
@@ -845,6 +850,14 @@ lgetStats(lua_State *L) {
 	default:
 		return luaL_error(L, "Unkown stat format %c", what[i]);
 	}}
+	return 1;
+}
+
+static int
+lgetMemory(lua_State *L) {
+	int64_t memory = 0;
+	luabgfx_info(&memory);
+	lua_pushinteger(L, memory);
 	return 1;
 }
 
@@ -3030,33 +3043,51 @@ get_texture_flags(lua_State *L, const char *format) {
 			luaL_error(L, "Invalid texture flags %c",format[i]);
 		}
 		switch(format[i+1]) {
-		case 'm': break;	// MIRROR
-		case 'c': t|= 1; break;	// CLAMP
-		case 'b': t|= 2; break;	// BORDER
-		case 'p': t|= 3; break;	// POINT
-		case 'a': t|= 4; break;	// ANISOTROPIC
+		case 'w': t|= 0xf;break;	// WRAP
+		case 'm': t|= 1;  break;	// MIRROR
+		case 'c': t|= 2;  break;	// CLAMP
+		case 'b': t|= 3;  break;	// BORDER
+		
+		case 'l': t|= 0xe;break;	// LINEAR
+		case 'p': t|= 4;  break;	// POINT
+		case 'a': t|= 5;  break;	// ANISOTROPIC
 		default:
 			luaL_error(L, "Invalid texture flags %c", format[i+1]);
 		}
 		switch(t) {
-		case 0x00: flags |= BGFX_SAMPLER_U_MIRROR; break;
-		case 0x01: flags |= BGFX_SAMPLER_U_CLAMP; break;
-		case 0x02: flags |= BGFX_SAMPLER_U_BORDER; break;
-		case 0x10: flags |= BGFX_SAMPLER_V_MIRROR; break;
-		case 0x11: flags |= BGFX_SAMPLER_V_CLAMP; break;
-		case 0x12: flags |= BGFX_SAMPLER_V_BORDER; break;
-		case 0x20: flags |= BGFX_SAMPLER_W_MIRROR; break;
-		case 0x21: flags |= BGFX_SAMPLER_W_CLAMP; break;
-		case 0x22: flags |= BGFX_SAMPLER_W_BORDER; break;
-		case 0x33: flags |= BGFX_SAMPLER_MIN_POINT; break;
-		case 0x34: flags |= BGFX_SAMPLER_MIN_ANISOTROPIC; break;
-		case 0x43: flags |= BGFX_SAMPLER_MAG_POINT; break;
-		case 0x44: flags |= BGFX_SAMPLER_MAG_ANISOTROPIC; break;
-		case 0x53: flags |= BGFX_SAMPLER_MIP_POINT; break;
-		case 0x60: flags |= BGFX_SAMPLER_UVW_MIRROR; break;
-		case 0x61: flags |= BGFX_SAMPLER_UVW_CLAMP; break;
-		case 0x62: flags |= BGFX_SAMPLER_UVW_BORDER; break;
-		case 0x63: flags |= BGFX_SAMPLER_POINT; break;
+		case 0x0f:								   break;
+		case 0x01: flags |= BGFX_SAMPLER_U_MIRROR; break;
+		case 0x02: flags |= BGFX_SAMPLER_U_CLAMP;  break;
+		case 0x03: flags |= BGFX_SAMPLER_U_BORDER; break;
+
+		case 0x1f: 									break;
+		case 0x11: flags |= BGFX_SAMPLER_V_MIRROR; break;
+		case 0x12: flags |= BGFX_SAMPLER_V_CLAMP;  break;
+		case 0x13: flags |= BGFX_SAMPLER_V_BORDER; break;
+
+		case 0x2f: 									break;
+		case 0x21: flags |= BGFX_SAMPLER_W_MIRROR; break;
+		case 0x22: flags |= BGFX_SAMPLER_W_CLAMP;  break;
+		case 0x23: flags |= BGFX_SAMPLER_W_BORDER; break;
+
+		case 0x3e: 									break;
+		case 0x34: flags |= BGFX_SAMPLER_MIN_POINT; break;
+		case 0x35: flags |= BGFX_SAMPLER_MIN_ANISOTROPIC; break;
+
+		case 0x4e: 									break;
+		case 0x44: flags |= BGFX_SAMPLER_MAG_POINT; break;
+		case 0x45: flags |= BGFX_SAMPLER_MAG_ANISOTROPIC; break;
+
+		case 0x5e: 									break;
+		case 0x54: flags |= BGFX_SAMPLER_MIP_POINT; break;
+
+		case 0x6f: 									 break;
+		case 0x61: flags |= BGFX_SAMPLER_UVW_MIRROR; break;
+		case 0x62: flags |= BGFX_SAMPLER_UVW_CLAMP;  break;
+		case 0x63: flags |= BGFX_SAMPLER_UVW_BORDER; break;
+
+		case 0x6e: 								break;
+		case 0x64: flags |= BGFX_SAMPLER_POINT; break;
 		default:
 			luaL_error(L, "Invalid texture flags %c%c", format[i], format[i+1]);
 		}
@@ -4182,6 +4213,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "init", linit },
 		{ "get_caps", lgetCaps },
 		{ "get_stats", lgetStats },
+		{ "get_memory", lgetMemory },
 		{ "reset", lreset },
 		{ "shutdown", lshutdown },
 		{ "set_view_clear", lsetViewClear },
