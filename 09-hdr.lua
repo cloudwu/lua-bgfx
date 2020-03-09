@@ -63,8 +63,6 @@ local ctrl = iup.frame {
 	size = "60",
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	iup.hbox {
 		iup.vbox {
@@ -150,7 +148,7 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.02 * settings.speed
 	shuffle()
@@ -204,8 +202,8 @@ local function mainloop()
 		bgfx.set_view_transform(i, nil, ctx.ortho)
 	end
 
-	local mtx = ms:srtmat ( nil,  { 0, time, 0 }, nil )
-	local view = ms( mtx, { 0,1,-2.5 } , "*" , { 0,1,0 }, "lP")
+	local mtx = math3d.matrix { r = { x = 0, y = time, z =0 } }
+	local view = math3d.lookat( math3d.mul( mtx, math3d.vector( 0,1,-2.5) ) , { 0,1,0 })
 
 	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
 
@@ -216,7 +214,7 @@ local function mainloop()
 	screenSpaceQuad( ctx.width, ctx.height, true)
 	bgfx.submit(hdrSkybox, ctx.m_skyProgram)
 
-	local tonemap = ms:vector ( settings.middleGray, settings.white ^ 2,	settings.threshold,	time )
+	local tonemap = math3d.vector ( settings.middleGray, settings.white ^ 2,	settings.threshold,	time )
 	local originBottomLeft = util.caps.originBottomLeft
 
 	-- Render m_mesh into view hdrMesh.
@@ -349,7 +347,7 @@ function ctx.init()
 		ctx.m_rb = bgfx.create_texture2d(1, 1, false, 1, "BGRA8", "br") -- BGFX_TEXTURE_READ_BACK
 	end
 
-	ctx.ortho = ms:ref "matrix" { type = "mat", ortho = true, l = 0, r= 1, b = 1, t = 0, n = 100, f = 0 }
+	ctx.ortho = math3d.ref(math3d.projmat { ortho = true, l = 0, r= 1, b = 1, t = 0, n = 100, f = 0 } )
 	ctx.m_fbtextures = {}
 
 	ctx.lumAvg_data = bgfx.memory_texture(4)
@@ -370,7 +368,7 @@ function ctx.resize(w,h)
 	fbtextures[2] = bgfx.create_texture2d(ctx.width, ctx.height, false, 1, depthFormat, textureFlags)
 
 	ctx.m_fbh = bgfx.create_frame_buffer(fbtextures, true)
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }
+	ctx.proj = math3d.ref (math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 })
 end
 
 util.init(ctx)

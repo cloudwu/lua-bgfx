@@ -9,8 +9,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "04-mesh",
@@ -19,11 +17,11 @@ local dlg = iup.dialog {
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
-	bgfx.set_uniform(ctx.u_time, {time,0,0,0})
-	local mtx = ms:srtmat(nil, {0, time, 0}, nil)
+	bgfx.set_uniform(ctx.u_time, math3d.vector {time,0,0,0})
+	local mtx = math3d.matrix { r = {x = 0, y = time, z = 0} }
 	bgfx.set_transform(mtx)
 	bgfx.set_state(ctx.state)
 	util.meshSubmit(ctx.mesh, 0, ctx.prog)
@@ -49,8 +47,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	local viewmat = ms( {0,1,-2.5}, {0,1,0}, "lP")
-	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
+	local viewmat = math3d.lookat( {0,1,-2.5}, {0,1,0} )
+	local projmat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)

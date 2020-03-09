@@ -134,27 +134,25 @@ dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
-
 local Uniforms = {}
 
 local function init_Uniforms()
-	Uniforms.params = ms:ref "vector" ( 1,1,4,4 )
+	Uniforms.params = math3d.ref(math3d.vector( 1,1,4,4 ))
 -- m_ambientPass, m_lightingPass, m_lightCount, m_lightIndex
---	Uniforms.svparams = ms:ref "vector"
-	Uniforms.ambient = ms:ref "vector" (0.02, 0.02, 0.02)
-	Uniforms.diffuse = ms:ref "vector" (0.2, 0.2, 0.2)
-	Uniforms.specular_shininess = ms:ref "vector" (1,1,1,10)	-- 10:shininess
-	Uniforms.color = ms:ref "vector" (1,1,1,1)
+--	Uniforms.svparams = math3d.ref(math3d.vector())
+	Uniforms.ambient = math3d.ref(math3d.vector(0.02, 0.02, 0.02))
+	Uniforms.diffuse = math3d.ref(math3d.vector(0.2, 0.2, 0.2))
+	Uniforms.specular_shininess = math3d.ref(math3d.vector(1,1,1,10))	-- 10:shininess
+	Uniforms.color = math3d.ref(math3d.vector(1,1,1,1))
 
 --		m_time = 0.0f;
 	Uniforms.lightPosRadius = {}
 	Uniforms.lightRgbInnerR = {}
 	Uniforms.tmpLights = {}	-- temp
 	for i = 1, MAX_LIGHTS do
-		Uniforms.lightPosRadius[i] = ms:ref "vector" (0,0,0,1)
-		Uniforms.lightRgbInnerR[i] = ms:ref "vector" (1,1,1,1)
-		Uniforms.tmpLights[i] = ms:ref "vector"
+		Uniforms.lightPosRadius[i] = math3d.ref(math3d.vector(0,0,0,1))
+		Uniforms.lightRgbInnerR[i] = math3d.ref(math3d.vector(1,1,1,1))
+		Uniforms.tmpLights[i] = math3d.ref(math3d.vector())
 	end
 
 	Uniforms.u_params = bgfx.create_uniform("u_params", "v4")
@@ -295,9 +293,9 @@ local function set_state(s)
 end
 
 local function mtxBillboard(view, pos, s0, s1, s2)
-	local v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15 = view:unpack()
-	local p0,p1,p2 = pos:unpack()
-	return ms:matrix (
+	local v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15 = table.unpack(view.v)
+	local p0,p1,p2 = table.unpack(pos.v)
+	return math3d.matrix (
 		v0 * s0,
 		v4 * s0,
 		v8 * s0,
@@ -322,7 +320,7 @@ local function mtxShadow(ground, light)
 	local l0,l1,l2,l3 = table.unpack(light)
 	local dot = g0 * l0 + g1 * l1 + g2 * l2 + g3 * l3
 
-	return ms:matrix (
+	return math3d.matrix (
 		dot - l0 * g0,
 		    - l1 * g0,
 		    - l2 * g0,
@@ -356,7 +354,7 @@ local draw_views = {
 local time = 0
 local deltaTime = 0.01
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + deltaTime
 
@@ -365,7 +363,7 @@ local function mainloop()
 	-- Update settings.
 	local numLights = math.floor(settings.lights)
 
-	Uniforms.params(1,1,numLights,0)
+	Uniforms.params.v = {1,1,numLights,0}
 
 	if settings.updateLights then
 		ctx.lightTimeAccumulator = ctx.lightTimeAccumulator + deltaTime
@@ -378,39 +376,42 @@ local function mainloop()
 	local radius = (settings.scene == "StencilReflectionScene") and 15 or 25
 	local pihalf = math.pi / 2
 	for i = 1, numLights do
-		Uniforms.lightPosRadius[i] (
+		Uniforms.lightPosRadius[i].v = {
 			math.sin(ctx.lightTimeAccumulator * 1.1 + i * 0.03 + i * pihalf* 1.07) * 20,
 			8 + (1 - math.cos(ctx.lightTimeAccumulator * 1.5 + i * 0.29 + pihalf * 1.49)) * 4,
 			math.cos(ctx.lightTimeAccumulator * 1.3 + i * 0.13 + i * pihalf * 1.79) * 20,
 			radius
-		)
+		}
 	end
 
 	-- Floor position.
-	local floorMtx = ms:srtmat( {20,20,20},nil,nil)
+	local floorMtx = math3d.matrix { s = {20,20,20} }
 
 	-- Bunny position.
-	local bunnyMtx = ms:srtmat( {5,5,5},{0,1.56 - ctx.sceneTimeAccumulator, 0}, {0,2,0})
+	local bunnyMtx = math3d.matrix { s = 5, r = { x=0,y=1.56 - ctx.sceneTimeAccumulator, z=0},t= {0,2,0} }
 
 	-- Columns position.
 
 	local columnMtx = {}
 	local dist = 14
-	columnMtx[1] = ms:srtmat(nil,nil, {dist, 0, dist})
-	columnMtx[2] = ms:srtmat(nil,nil, {-dist, 0, dist})
-	columnMtx[3] = ms:srtmat(nil,nil, {dist, 0, -dist})
-	columnMtx[4] = ms:srtmat(nil,nil, {-dist, 0, -dist})
+	columnMtx[1] = math3d.matrix { t = {dist, 0, dist} }
+	columnMtx[2] = math3d.matrix { t = {-dist, 0, dist} }
+	columnMtx[3] = math3d.matrix { t = {dist, 0, -dist} }
+	columnMtx[4] = math3d.matrix { t = {-dist, 0, -dist} }
 
 	bgfx.set_view_clear(0, "CDS", 0x303030ff, 1, 0)
 
 	-- Bunny and columns color.
-	Uniforms.color(0.7, 0.65, 0.6, settings.reflection)
+	Uniforms.color.v = { 0.7, 0.65, 0.6, settings.reflection }
 
 	if settings.scene == "StencilReflectionScene" then
 		-- First pass - Draw plane.
 
 		-- Setup params for this scene.
-		Uniforms.params:pack(1, 1)
+		local tmp = Uniforms.params.v	-- returns a table
+		tmp[1] = 1
+		tmp[2] = 1
+		Uniforms.params.v = tmp
 
 		-- Floor.
 		set_state(s_renderStates.StencilReflection_CraftStencil)
@@ -426,13 +427,13 @@ local function mainloop()
 		local reflectedLights = Uniforms.tmpLights
 		for ii = 1, numLights do
 			local light = Uniforms.lightPosRadius[ii]
-			reflectedLights[ii](light)
-			ms(light, ctx.reflectMtx, light, "*=")
+			reflectedLights[ii].v = light
+			light.v = math3d.mul(ctx.reflectMtx, light)
 		end
 
 		-- Reflect and submit bunny.
 
-		local mtxReflectedBunny = ms( ctx.reflectMtx , bunnyMtx, "*P")
+		local mtxReflectedBunny = math3d.mul( ctx.reflectMtx , bunnyMtx)
 		set_state(s_renderStates.StencilReflection_DrawReflected)
 		bgfx.set_transform(mtxReflectedBunny)
 		submitPerDrawUniforms()
@@ -441,7 +442,7 @@ local function mainloop()
 		-- Reflect and submit columns.
 
 		for ii = 1, 4 do
-			local mtxReflectedColumn = ms(ctx.reflectMtx , columnMtx[ii], "*P")
+			local mtxReflectedColumn = math3d.mul(ctx.reflectMtx , columnMtx[ii])
 			set_state(s_renderStates.StencilReflection_DrawReflected)
 			bgfx.set_transform(mtxReflectedColumn)
 			submitPerDrawUniforms()
@@ -482,8 +483,8 @@ local function mainloop()
 		local cubeMtx = ctx.cubeMtx
 
 		for i=1,numCubes do
-			cubeMtx[i] = ms:srtmat(nil,nil, { math.sin(i*2 + 11 - ctx.sceneTimeAccumulator) * 13, 4,
-				math.cos(i*2 + 11 - ctx.sceneTimeAccumulator) * 13 } )
+			cubeMtx[i] = math3d.matrix { t = { math.sin(i*2 + 11 - ctx.sceneTimeAccumulator) * 13, 4,
+				math.cos(i*2 + 11 - ctx.sceneTimeAccumulator) * 13 } }
 		end
 
 		-- First pass - Draw entire scene. (ambient only).
@@ -514,7 +515,7 @@ local function mainloop()
 		-- Ground plane.
 		local plane_pos = { 0,0,0 }
 		local normal = { 0,1,0 }
-		local ground = { 0,1,0, - ms(plane_pos, normal, ".", ms.popnumber) - 0.01 } -- - 0.01 against z-fighting
+		local ground = { 0,1,0, - math3d.dot(plane_pos, normal) - 0.01 } -- - 0.01 against z-fighting
 
 		for i=1, numLights do
 			local viewId = RENDER_VIEWID_RANGE5_PASS_6 + i - 1
@@ -531,7 +532,7 @@ local function mainloop()
 			local shadowMtx = mtxShadow(ground, pos)
 
 			-- Submit bunny's shadow.
-			local mtxShadowedBunny = ms(shadowMtx, bunnyMtx, "*P")
+			local mtxShadowedBunny = math3d.mul(shadowMtx, bunnyMtx)
 			set_state(s_renderStates.ProjectionShadows_CraftStencil)
 			bgfx.set_transform(mtxShadowedBunny)
 			submitPerDrawUniforms()
@@ -539,7 +540,7 @@ local function mainloop()
 
 			-- Submit cube shadows.
 			for j = 1, numCubes do
-				local mtxShadowedCube = ms(shadowMtx, cubeMtx[j], "*P")
+				local mtxShadowedCube = math3d.mul(shadowMtx, cubeMtx[j])
 				set_state(s_renderStates.ProjectionShadows_CraftStencil)
 				bgfx.set_transform(mtxShadowedCube)
 				submitPerDrawUniforms()
@@ -581,7 +582,7 @@ local function mainloop()
 
 	-- lights
 	for ii = 1, numLights do
-		Uniforms.color(Uniforms.lightRgbInnerR[ii])
+		Uniforms.color.v = Uniforms.lightRgbInnerR[ii]
 		local lightMtx = mtxBillboard(ctx.view, Uniforms.lightPosRadius[ii], 1.5, 1.5, 1.5)
 		set_state(s_renderStates.Custom_BlendLightTexture)
 		bgfx.set_transform(lightMtx)
@@ -617,9 +618,9 @@ local function mainloop()
 end
 
 local function mtxReflected(p , n)
-	local dot = ms(p,n,".",ms.popnumber)
+	local dot = math3d.dot(p,n)
 	local x,y,z = n[1],n[2],n[3]
-	return ms:matrix (
+	return math3d.matrix (
 		 1 - 2 * x* x,  --  1-2Nx^2
 		-2 * x * y,		--  -2*Nx*Ny
 		-2 * x * z,		--  -2*NxNz
@@ -759,7 +760,7 @@ function ctx.init()
 
 	for i = 1, MAX_LIGHTS do
 		local index = i % #rgbInnerR + 1
-		Uniforms.lightRgbInnerR[i] = ms:ref "vector" (rgbInnerR[index])
+		Uniforms.lightRgbInnerR[i] = math3d.ref(math3d.vector(rgbInnerR[index]))
 	end
 
 	ctx.lightTimeAccumulator = 0
@@ -769,8 +770,8 @@ function ctx.init()
 	local plane_pos = { 0,0.01,0 }
 	local normal = { 0,1,0 }
 
-	ctx.reflectMtx = ms:ref "matrix" ( mtxReflected(plane_pos, normal) )
-	ctx.floor = ms:ref "matrix" { type = "srt", s = {20,20,20} , t = { 0, -0.1, 0 } }
+	ctx.reflectMtx = math3d.ref( mtxReflected(plane_pos, normal) )
+	ctx.floor = math3d.ref(math3d.matrix { s = 20 , t = { 0, -0.1, 0 } })
 
 	ctx.cubeMtx = {}
 end
@@ -780,8 +781,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	ctx.view = ms:ref "matrix" (ms( { 0, 18, -40 }, {0,0,0} , "lP"))
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 2000 }
+	ctx.view = math3d.ref(math3d.lookat( { 0, 18, -40 }, {0,0,0}))
+	ctx.proj = math3d.ref(math3d.projmat {fov = 60, aspect = w/h, n = 0.1, f = 2000 })
 end
 
 util.init(ctx)

@@ -9,8 +9,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "05-instancing",
@@ -19,7 +17,7 @@ local dlg = iup.dialog {
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 	ctx.idb:alloc(121)
@@ -27,15 +25,15 @@ local function mainloop()
 	local i = 0
 	for yy=0,10 do
 		for xx=0,10 do
-			local mtx = ms( { type = "srt",
-				r = { time + xx* 0.21 , time + yy * 0.37, 0 },
+			local mtx = math3d.matrix {
+				r = { x = time + xx* 0.21 , y = time + yy * 0.37, z = 0 },
 				t = { -15.0 + xx*3.0, -15.0 + yy*3.0, 0.0 },
-			} , "P")
-			local color = ms( {
+			}
+			local color = math3d.vector(
 				math.sin(time+xx/11)*0.5+0.5,
 				math.cos(time+yy/11)*0.5+0.5,
 				math.sin(time*3.0)*0.5+0.5
-				}, "P")
+				)
 			ctx.idb(i, mtx, color)
 			i = i + 1
 		end
@@ -103,8 +101,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms( { 0.0, 0.0, -35.0 }, {  0,0,0 }, "lP")
-	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
+	local viewmat = math3d.lookat( { 0.0, 0.0, -35.0 }, { 0,0,0 } )
+	local projmat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 end

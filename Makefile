@@ -38,6 +38,9 @@ bin :
 bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o $(ODIR)/luabgfximgui.o $(ODIR)/bgfx_alloc.o | bin
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
+math :
+	cd math3d && $(MAKE) OUTPUT=../bin/
+
 bin/math3d.dll : | bin
 	cd math3d && $(MAKE) OUTPUT=../bin/
 

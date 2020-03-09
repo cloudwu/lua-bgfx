@@ -724,8 +724,6 @@ end
 
 -----------------------------------------------
 
-local ms = util.mathstack
-
 local Uniforms = {}
 
 local function init_Uniforms()
@@ -733,7 +731,7 @@ local function init_Uniforms()
 	local function univ(name, x,y,z,w)
 		z = z or 0
 		w = w or 0
-		Uniforms[name] = ms:ref "vector" (x,y,z,w)
+		Uniforms[name] = math3d.ref(math3d.vector(x,y,z,w))
 	end
 
 	Uniforms.ambientPass = 1
@@ -824,22 +822,22 @@ end
 
 -- Call this once per frame.
 local function submitPerFrameUniforms()
-	Uniforms.params1:pack(Uniforms.shadowMapBias,
+	Uniforms.params1.v = { Uniforms.shadowMapBias,
 		Uniforms.shadowMapOffset,
 		Uniforms.shadowMapParam0,
-		Uniforms.shadowMapParam1)
+		Uniforms.shadowMapParam1 }
 	bgfx.set_uniform(Uniforms.u_params1, Uniforms.params1)
-	Uniforms.params2:pack(
+	Uniforms.params2.v = {
 		Uniforms.depthValuePow,
 		Uniforms.showSmCoverage,
-		Uniforms.shadowMapTexelSize)
+		Uniforms.shadowMapTexelSize }
 	bgfx.set_uniform(Uniforms.u_params2, Uniforms.params2)
 
-	Uniforms.paramsBlur:pack(
+	Uniforms.paramsBlur.v = {
 		Uniforms.XNum,
 		Uniforms.YNum,
 		Uniforms.XOffset,
-		Uniforms.YOffset)
+		Uniforms.YOffset }
 	bgfx.set_uniform(Uniforms.u_smSamplingParams, Uniforms.paramsBlur)
 
 	bgfx.set_uniform(Uniforms.u_csmFarDistances, Uniforms.csmFarDistances)
@@ -863,7 +861,7 @@ local function submitPerDrawUniforms()
 	bgfx.set_uniform(Uniforms.u_shadowMapMtx2, Uniforms.shadowMapMtx2)
 	bgfx.set_uniform(Uniforms.u_shadowMapMtx3, Uniforms.shadowMapMtx3)
 
-	Uniforms.params0:pack(Uniforms.ambientPass, Uniforms.lightingPass)
+	Uniforms.params0.v = { Uniforms.ambientPass, Uniforms.lightingPass, 0, 0 }
 	bgfx.set_uniform(Uniforms.u_params0,  Uniforms.params0)
 
 	bgfx.set_uniform(Uniforms.u_lightMtx, Uniforms.lightMtxPtr)
@@ -1043,32 +1041,35 @@ local function worldSpaceFrustumCorners(out,near, far, projWidth, projHeight, in
 	local fh = far * projHeight
 
 	local numCorners = 8
-	corners[1] = ms:vector (-nw,  nh, near ,1)
-	corners[2] = ms:vector ( nw,  nh, near ,1)
-	corners[3] = ms:vector ( nw, -nh, near ,1)
-	corners[4] = ms:vector (-nw, -nh, near ,1)
-	corners[5] = ms:vector (-fw,  fh, far  ,1)
-	corners[6] = ms:vector ( fw,  fh, far  ,1)
-	corners[7] = ms:vector ( fw, -fh, far ,1)
-	corners[8] = ms:vector (-fw, -fh, far ,1)
+	corners[1] = math3d.vector (-nw,  nh, near ,1)
+	corners[2] = math3d.vector ( nw,  nh, near ,1)
+	corners[3] = math3d.vector ( nw, -nh, near ,1)
+	corners[4] = math3d.vector (-nw, -nh, near ,1)
+	corners[5] = math3d.vector (-fw,  fh, far  ,1)
+	corners[6] = math3d.vector ( fw,  fh, far  ,1)
+	corners[7] = math3d.vector ( fw, -fh, far ,1)
+	corners[8] = math3d.vector (-fw, -fh, far ,1)
 
 	-- Convert them to world space.
 	for i = 1, numCorners do
-		out[i] = ms ( invViewMtx, corners[i], "*P" )	-- out[i] = corners[i] * invViewMtx
+		out[i] = math3d.mul ( invViewMtx, corners[i] )	-- out[i] = corners[i] * invViewMtx
 	end
 end
 
 local function computeViewSpaceComponents(light, mtx)
-	ms( light.position_viewSpace, mtx, light.position, "*=")
-	local v1,v2,v3,v4 = light.spotdirection:unpack()
-	local tmp = ms:vector(v1,v2,v3,0)
-	light.spotdirection_viewSpace( ms (mtx, tmp, "*P") ):pack(nil,nil,nil,v4)
+	light.position_viewSpace.v = math3d.mul(mtx, light.position)
+	local v = light.spotdirection.v
+	local v4 = v[4]
+	v[4] = 0
+	local r = math3d.totable(math3d.mul(mtx, math3d.vector(v)))
+	r[4] = v4
+	light.spotdirection_viewSpace.v = r
 end
 
 local function mtxBillboard(view, pos, s0,s1,s2)
-	local p0,p1,p2 = pos:unpack()
-	local v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15 = view:unpack()
-	return ms:matrix(
+	local p0,p1,p2 = table.unpack(pos.v)
+	local v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15 = table.unpack(view.v)
+	return math3d.matrix(
 		v0 * s0,
 		v4 * s0,
 		v8 * s0,
@@ -1178,7 +1179,7 @@ end
 
 local function init_mat4(array)
 	for i =1,4 do
-		array[i] = math3d.ref "matrix"
+		array[i] = math3d.ref(math3d.matrix())
 	end
 	return array
 end
@@ -1193,7 +1194,7 @@ local mtxCropBias = {}
 local function mainloop()
 	local view = ctx.view
 	local proj = ctx.proj
-	math3d.reset(ms)
+	math3d.reset()
 
 	Uniforms.shadowMapTexelSize = 1 / ctx.m_currentShadowMapSize
 	submitConstUniforms()
@@ -1222,10 +1223,17 @@ local function mainloop()
 		--	float m_z;
 		--	float m_inner;
 	if settings.lightType == "SpotLight" then
-		ctx.m_pointLight.attenuation:pack(nil, nil, nil, settings.spotOuterAngle)
-		ctx.m_pointLight.spotdirection:pack(nil, nil, nil, settings.spotInnerAngle)
+		local t = ctx.m_pointLight.attenuation.v
+		t[4] = settings.spotOuterAngle
+		ctx.m_pointLight.attenuation.v = t
+
+		local t = ctx.m_pointLight.spotdirection.v
+		t[4] = settings.spotInnerAngle
+		ctx.m_pointLight.spotdirection.v = t
 	else
-		ctx.m_pointLight.attenuation:pack(nil, nil, nil, 91) --above 90.0f means point light
+		local t = ctx.m_pointLight.attenuation.v
+		t[4] = 91 --above 90.0f means point light
+		ctx.m_pointLight.attenuation.v = t
 	end
 
 	submitPerFrameUniforms()
@@ -1247,51 +1255,52 @@ local function mainloop()
 	local x = math.cos(ctx.m_timeAccumulatorLight) * 20
 	local y = 26
 	local z = math.sin(ctx.m_timeAccumulatorLight) * 20
-	ctx.m_pointLight.position:pack(x,y,z)
-	ctx.m_pointLight.spotdirection:pack(-x,-y,-z)
+	ctx.m_pointLight.position.v = { x,y,z }
+	ctx.m_pointLight.spotdirection.v = { -x,-y,-z }
 
-	ctx.m_directionalLight.position:pack(
+	ctx.m_directionalLight.position.v = {
 		-math.cos(ctx.m_timeAccumulatorLight),
 		-1,
-		-math.sin(ctx.m_timeAccumulatorLight))
+		-math.sin(ctx.m_timeAccumulatorLight) }
 
 	-- Setup instance matrices.
 	local floorScale = 550.0
-	local mtxFloor = ms:srtmat( {floorScale,floorScale,floorScale}, nil, nil )
-	local mtxBunny = ms:srtmat( { 5.0, 5.0, 5.0 },
-					{0.0 , 1.56 - ctx.m_timeAccumulatorScene, 0.0 },
-					{15.0, 5.0, 0.0 } )
+	local mtxFloor = math3d.matrix { s = floorScale }
+	local mtxBunny = math3d.matrix { s = 5,
+					r = {x = 0.0 , y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0 },
+					t = {15.0, 5.0, 0.0 } }
 
-	local mtxHollowcube = ms:srtmat( {2.5, 2.5, 2.5 },
-					{ 0.0, 1.56 - ctx.m_timeAccumulatorScene, 0.0 },
-					{ 0.0, 10.0, 0.0 } )
+	local mtxHollowcube = math3d.matrix { s = 2.5 ,
+					r = { x = 0.0, y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0 },
+					t = { 0.0, 10.0, 0.0 } }
 
-	local mtxCube = ms:srtmat( { 2.5, 2.5, 2.5 },
-					{ 0.0, 1.56 - ctx.m_timeAccumulatorScene, 0.0},
-					{ -15.0, 5.0, 0.0 } )
+	local mtxCube = math3d.matrix { s = 2.5,
+					r = { x = 0.0, y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0},
+					t = { -15.0, 5.0, 0.0 } }
 
 	local numTrees = 10
 	for i = 1, 	numTrees do
-		mtxTrees[i] = ms:srtmat( {2,2,2},
-						{ 0 , i-1 , 0 },
-						{ math.sin((i-1)*2*math.pi/numTrees ) * 60
+		mtxTrees[i] = math3d.matrix { s = 2,
+						r = { x = 0 , y = i-1 , z = 0 },
+						t = { math.sin((i-1)*2*math.pi/numTrees ) * 60
 						   , 0.0
 						   , math.cos((i-1)*2*math.pi/numTrees ) * 60
-						} )
+						} }
 	end
 
 	-- Compute transform matrices.
 	local shadowMapPasses = 4
 
-	local screenProj = ms:matrix { type = "mat", ortho = true,
+	local screenProj = math3d.projmat { ortho = true,
 		l = 0, r = 1, b = 1, t= 0, n= 0,f = 100 }
-	local screenView = math3d.constant "identmat"
+	local screenView = math3d.matrix()
 
 	local function matrix_far(mtx)
-		local m = ms (mtx, "T")
+		local m = mtx.v
 		m[11] = m[11] / settings.far
 		m[15] = m[15] / settings.far
-		return ms (mtx, m , "=")
+		mtx.m = m
+		return mtx
 	end
 
 	if settings.lightType == "SpotLight" then
@@ -1300,19 +1309,17 @@ local function mainloop()
 		-- Horizontal == 1
 
 		local mtx = lightProj[1]
-		ms ( mtx , { type = "mat", fov = fovy, aspect = aspect, n = settings.near, f = settings.far }, "=" )
+		mtx.m = math3d.projmat { fov = fovy, aspect = aspect, n = settings.near, f = settings.far }
 		-- For linear depth, prevent depth division by variable w-component in shaders and divide here by far plane
 		if settings.depthImpl == "Linear" then
 			matrix_far(mtx)
 		end
-		local v1,v2,v3 = ctx.m_pointLight.position:unpack()
-		local v4,v5,v6 = ctx.m_pointLight.spotdirection:unpack()
-		local at = ms:vector(v1+v4,v2+v5,v3+v6)
+		local at = math3d.add(ctx.m_pointLight.position, ctx.m_pointLight.spotdirection)
 		-- Green == 1
 		-- Yellow 2
 		-- Blue 3
 		-- Red 4
-		ms (lightView[1] , ctx.m_pointLight.position, at , "l=")
+		lightView[1].m = math3d.lookat(ctx.m_pointLight.position, at)
 	elseif settings.lightType == "PointLight" then
 		local rad = math.rad
 		local ypr =	{
@@ -1329,7 +1336,7 @@ local function mainloop()
 
 			-- Vertical == 2
 			local mtx = lightProj[2]
-			ms ( mtx , { type = "mat", fov = fovx , aspect = aspect, n = settings.near, f = settings.far } , "=" )
+			mtx.m = math3d.projmat { fov = fovx , aspect = aspect, n = settings.near, f = settings.far }
 
 			--For linear depth, prevent depth division by variable w-component in shaders and divide here by far plane
 			if settings.depthImpl == "Linear" then
@@ -1347,7 +1354,7 @@ local function mainloop()
 		local aspect = math.tan(rad(fovx*0.5) )/math.tan(rad(fovy*0.5) )
 
 		local mtx = lightProj[1]
-		ms (mtx,  { type = "mat", fov = fovy, aspect = aspect, n = settings.near, f = settings.far }, "=")
+		mtx.m = math3d.projmat  { fov = fovy, aspect = aspect, n = settings.near, f = settings.far }
 
 		-- For linear depth, prevent depth division by variable w component in shaders and divide here by far plane
 
@@ -1359,31 +1366,31 @@ local function mainloop()
 			local m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12,m13,m14,m15 = mtxYawPitchRoll(ypr[i])
 
 			local pv = ctx.m_pointLight.position
-			local tmp_x = - ms(pv, {m0,m1,m2}, ".", ms.popnumber)
-			local tmp_y = - ms(pv, {m4,m5,m6}, ".", ms.popnumber)
-			local tmp_z = - ms(pv, {m8,m9,m10}, ".", ms.popnumber)
+			local tmp_x = - math3d.dot(pv, {m0,m1,m2})
+			local tmp_y = - math3d.dot(pv, {m4,m5,m6})
+			local tmp_z = - math3d.dot(pv, {m8,m9,m10})
 
-			local mtxTmp = ms:matrix (
+			local mtxTmp = math3d.matrix (
 				m0,m1,m2,m3,
 				m4,m5,m6,m7,
 				m8,m9,m10,m11,
 				m12,m13,m14,m15)
 
-			local tmp
-			tmp, mtxYpr[i] = ms (mtxTmp , "t1TP")
-			tmp[13] = tmp_x
-			tmp[14] = tmp_y
-			tmp[15] = tmp_z
-			tmp[16] = 1
-			ms (lightView[i] , tmp, "=")
+			mtxYpr[i] = math3d.transpose(mtxTmp)
+			local t = math3d.totable(mtxYpr[i])
+			t[13] = tmp_x
+			t[14] = tmp_y
+			t[15] = tmp_z
+			t[16] = 1
+			lightView[i] = math3d.matrix(t)
 		end
 	else -- "DirectionalLight"
 		-- Setup light view mtx.
-		local px,py,pz = ctx.m_directionalLight.position:unpack()
-		lightView[1]( ms( {-px,-py,-pz},{0,0,0}, "lP" ) )
+		local px,py,pz = table.unpack(ctx.m_directionalLight.position.v)
+		lightView[1].m = math3d.lookat( {-px,-py,-pz},{0,0,0} )
 
 		-- Compute camera inverse view mtx.
-		local mtxViewInv = ms(view, "iP")
+		local mtxViewInv = math3d.inverse(view)
 
 		-- Compute split distances.
 		local maxNumSplits = 4
@@ -1396,9 +1403,9 @@ local function mainloop()
 		-- Update uniforms.
 
 		-- This lags for 1 frame, but it's not a problem.
-		Uniforms.csmFarDistances:pack(splitSlices[2], splitSlices[4], splitSlices[6], splitSlices[8])
+		Uniforms.csmFarDistances.v = { splitSlices[2], splitSlices[4], splitSlices[6], splitSlices[8] }
 
-		local mtxProj = ms:matrix { type = "mat", ortho = true,
+		local mtxProj = math3d.projmat { ortho = true,
 			l=1,r=-1,b=1,t=-1,n=-settings.far,f=settings.far }
 
 		local numCorners = 8
@@ -1423,7 +1430,7 @@ local function mainloop()
 			for j = 1, numCorners do
 				-- Transform to light space.
 				-- Update bounding box.
-				local tmp = ms(lightView[1], fc[j], "*T")
+				local tmp = math3d.totable(math3d.mul(lightView[1], fc[j]))
 				local v1,v2,v3 = tmp[1], tmp[2], tmp[3]
 				min[1] = math.min(min[1], v1)
 				max[1] = math.max(max[1], v1)
@@ -1433,8 +1440,8 @@ local function mainloop()
 				max[3] = math.max(max[3], v3)
 			end
 
-			local minproj = ms(min, mtxProj, "%T")
-			local maxproj = ms(max, mtxProj, "%T")
+			local minproj = math3d.totable(math3d.mulH(min, mtxProj))
+			local maxproj = math3d.totable(math3d.mulH(max, mtxProj))
 
 			local max_x, max_y = maxproj[1], maxproj[2]
 			local min_x, min_y = minproj[1], minproj[2]
@@ -1457,14 +1464,13 @@ local function mainloop()
 				offsety = math.ceil(offsety * halfSize) / halfSize
 			end
 
-			ms (lightProj[i] , mtxProj,
-				{
+			lightProj[i].m = math3d.mul(mtxProj,
+				math3d.matrix {
 					scalex, 0,0,0,
 					0, scaley, 0, 0,
 					0, 0, 1, 0,
 					offsetx, offsety, 0, 1
-				},
-				"*=")
+				})
 		end
 	end
 
@@ -1779,41 +1785,43 @@ local function mainloop()
 		local mtxShadow
 		local ymul = ctx.s_flipV and 0.5 or -0.5
 		local zadd = settings.depthImpl == "Linear" and 0 or 0.5
-		local mtxBias = ms:matrix(
+		local mtxBias = math3d.matrix(
 					0.5, 0.0, 0.0, 0.0,
 					0.0, ymul, 0.0, 0.0,
 					0.0, 0.0, 0.5, 0.0,
 					0.5, 0.5, zadd, 1.0
 				)
 		if settings.lightType == "SpotLight" then
-			mtxShadow = ms ( mtxBias, lightProj[1], "*", lightView[1], "*P") -- lightViewProjBias
+			mtxShadow = math3d.mul (
+				math3d.mul ( mtxBias, lightProj[1] ) ,
+				lightView[1]) -- lightViewProjBias
 		elseif settings.lightType == "PointLight" then
 			local s = ymul * 2 -- (s_flipV) ? 1.0f : -1.0f; //sign
 			--		zadd = (DepthImpl::Linear == m_settings.m_depthImpl) ? 0.0f : 0.5f;
 			if not settings.stencilPack then
 				-- D3D: Green, OGL: Blue
-				mtxCropBias[1] = ms:matrix(
+				mtxCropBias[1] = math3d.matrix(
 					0.25,    0.0, 0.0, 0.0,
 				 0.0, s*0.25, 0.0, 0.0,
 				 0.0,    0.0, 0.5, 0.0,
 					0.25,   0.25, zadd, 1.0
 				)
 				-- D3D: Yellow, OGL: Red
-				mtxCropBias[2] = ms:matrix(
+				mtxCropBias[2] = math3d.matrix(
 					0.25,    0.0, 0.0, 0.0,
 				 0.0, s*0.25, 0.0, 0.0,
 				 0.0,    0.0, 0.5, 0.0,
 					0.75,   0.25, zadd, 1.0
 				)
 				-- D3D: Blue, OGL: Green
-				mtxCropBias[3] = ms:matrix(
+				mtxCropBias[3] = math3d.matrix(
 						0.25,    0.0, 0.0, 0.0,
 					 0.0, s*0.25, 0.0, 0.0,
 					 0.0,    0.0, 0.5, 0.0,
 						0.25,   0.75, zadd, 1.0
 				)
 				-- D3D: Red, OGL: Yellow
-				mtxCropBias[4] = ms:matrix(
+				mtxCropBias[4] = math3d.matrix(
 						0.25,    0.0, 0.0, 0.0,
 					 0.0, s*0.25, 0.0, 0.0,
 					 0.0,    0.0, 0.5, 0.0,
@@ -1821,28 +1829,28 @@ local function mainloop()
 				)
 			else
 				-- D3D: Red, OGL: Blue
-				mtxCropBias[1] = ms:matrix(
+				mtxCropBias[1] = math3d.matrix(
 						0.25,   0.0, 0.0, 0.0,
 					 0.0, s*0.5, 0.0, 0.0,
 					 0.0,   0.0, 0.5, 0.0,
 						0.25,   0.5, zadd, 1.0
 					)
 				-- D3D: Blue, OGL: Red
-				mtxCropBias[2] = ms:matrix(
+				mtxCropBias[2] = math3d.matrix(
 						0.25,   0.0, 0.0, 0.0,
 					 0.0, s*0.5, 0.0, 0.0,
 					 0.0,   0.0, 0.5, 0.0,
 						0.75,   0.5, zadd, 1.0
 					)
 				-- D3D: Green, OGL: Green
-				mtxCropBias[3] = ms:matrix(
+				mtxCropBias[3] = math3d.matrix(
 					0.5,    0.0, 0.0, 0.0,
 					0.0, s*0.25, 0.0, 0.0,
 					0.0,    0.0, 0.5, 0.0,
 					0.5,   0.75, zadd, 1.0
 					)
 				-- D3D: Yellow, OGL: Yellow
-				mtxCropBias[4] = ms:matrix(
+				mtxCropBias[4] = math3d.matrix(
 					0.5,    0.0, 0.0, 0.0,
 					0.0, s*0.25, 0.0, 0.0,
 					0.0,    0.0, 0.5, 0.0,
@@ -1858,17 +1866,19 @@ local function mainloop()
 					projType = 1 -- ProjType::Horizontal
 				end
 				local biasIndex = ctx.cropBiasIndices[settings.stencilPack][ctx.s_flipV][i]
-				ms (ctx.m_shadowMapMtx[i], mtxCropBias[biasIndex],
-					lightProj[projType], mtxYpr[i], "**=") -- mtxYprProjBias
+				ctx.m_shadowMapMtx[i].m = math3d.mul (
+					mtxCropBias[biasIndex],
+					math3d.mul(lightProj[projType], mtxYpr[i])) -- mtxYprProjBias
 			end
 
 			-- lightInvTranslate
-			local vx,vy,vz = ctx.m_pointLight.position:unpack()
-			mtxShadow = ms:srtmat( nil, nil, {-vx,-vy,-vz})
+			local vx,vy,vz = table.unpack(ctx.m_pointLight.position.v)
+			mtxShadow = math3d.matrix { t = {-vx,-vy,-vz} }
 		else -- //LightType::DirectionalLight == settings.m_lightType
 			for i = 1, settings.numSplits do
-				ms (ctx.m_shadowMapMtx[i], mtxBias, lightProj[i], "*",
-					lightView[1], "*=")
+				ctx.m_shadowMapMtx[i].m =
+					math3d.mul(	math3d.mul(mtxBias, lightProj[i]),
+						lightView[1])
 			end
 		end
 
@@ -1876,28 +1886,28 @@ local function mainloop()
 		local m_lightMtx = ctx.m_lightMtx
 		local notdirectional = settings.lightType ~= "DirectionalLight"
 		if notdirectional then
-			ms(m_lightMtx, mtxShadow, mtxFloor, "*=") -- not needed for directional light
+			m_lightMtx.m = math3d.mul(mtxShadow, mtxFloor) -- not needed for directional light
 		end
 
 		submitShadowMesh(ctx.m_hplaneMesh, RENDERVIEW_DRAWSCENE_0_ID, mtxFloor, progDraw_id, s_renderState.Default, nil, true)
 
 		-- Bunny.
 		if notdirectional then
-			ms (m_lightMtx, mtxShadow, mtxBunny, "*=")
+			m_lightMtx.m = math3d.mul(mtxShadow, mtxBunny)
 		end
 
 		submitShadowMesh(ctx.m_bunnyMesh, RENDERVIEW_DRAWSCENE_0_ID, mtxBunny, progDraw_id, s_renderState.Default, nil, true)
 
 		-- Hollow cube.
 		if notdirectional then
-			ms (m_lightMtx, mtxShadow, mtxHollowcube, "*=")
+			m_lightMtx.m = math3d.mul(mtxShadow, mtxHollowcube)
 		end
 
 		submitShadowMesh(ctx.m_hollowcubeMesh, RENDERVIEW_DRAWSCENE_0_ID, mtxHollowcube, progDraw_id, s_renderState.Default, nil, true)
 
 		-- Cube.
 		if notdirectional then
-			ms (m_lightMtx, mtxShadow, mtxCube, "*=")
+			m_lightMtx.m = math3d.mul(mtxShadow, mtxCube)
 		end
 
 		submitShadowMesh(ctx.m_cubeMesh, RENDERVIEW_DRAWSCENE_0_ID, mtxCube, progDraw_id, s_renderState.Default, nil, true)
@@ -1905,7 +1915,7 @@ local function mainloop()
 		-- Trees.
 		for i = 1, numTrees do
 			if notdirectional then
-				ms (m_lightMtx, mtxShadow, mtxTrees[i], "*=")
+				m_lightMtx.m = math3d.mul(mtxShadow, mtxTrees[i])
 			end
 
 			submitShadowMesh(ctx.m_treeMesh, RENDERVIEW_DRAWSCENE_0_ID, mtxTrees[i], progDraw_id, s_renderState.Default, nil, true)
@@ -1924,10 +1934,8 @@ local function mainloop()
 		end
 
 		-- Draw floor bottom.
-		local floorBottomMtx = ms:srtmat(
-			{floorScale, floorScale, floorScale},	--scale
-			nil,
-			{0,-0.1,0})
+		local floorBottomMtx = math3d.matrix { s = floorScale,	--scale
+			t = {0,-0.1,0} }
 
 		submitShadowMesh(ctx.m_hplaneMesh, RENDERVIEW_DRAWSCENE_1_ID
 			, floorBottomMtx
@@ -2085,45 +2093,45 @@ function ctx.init()
 	-- Materials.
 
 	ctx.m_defaultMaterial = {
-		ambient = ms:ref "vector" (1,1,1,0),
-		diffuse = ms:ref "vector" (1,1,1,0),
-		specular = ms:ref "vector" (1,1,1,0),
+		ambient = math3d.ref (math3d.vector(1,1,1,0)),
+		diffuse =  math3d.ref (math3d.vector(1,1,1,0)),
+		specular =  math3d.ref (math3d.vector(1,1,1,0)),
 	}
 
 	-- Lights.
 	ctx.m_pointLight = {
-		position = ms:ref "vector" (0,0,0,1),
-		position_viewSpace = ms:ref "vector" (0,0,0,0),
-		ambient = ms:ref "vector" (1,1,1,0),
-		diffuse = ms:ref "vector" (1,1,1,850),
-		specular = ms:ref "vector" (1,1,1,0),
-		spotdirection = ms:ref "vector" (0,-0.4,-0.6,1),
-		spotdirection_viewSpace = ms:ref "vector" (0,0,0,0),
-		attenuation = ms:ref "vector" (1,1,1,91),
+		position =  math3d.ref (math3d.vector(0,0,0,1)),
+		position_viewSpace =  math3d.ref (math3d.vector(0,0,0,0)),
+		ambient =  math3d.ref (math3d.vector (1,1,1,0)),
+		diffuse =  math3d.ref (math3d.vector (1,1,1,850)),
+		specular =  math3d.ref (math3d.vector (1,1,1,0)),
+		spotdirection =  math3d.ref (math3d.vector (0,-0.4,-0.6,1)),
+		spotdirection_viewSpace =  math3d.ref (math3d.vector (0,0,0,0)),
+		attenuation =  math3d.ref (math3d.vector (1,1,1,91)),
 	}
 
 	ctx.m_directionalLight = {
-		position = ms:ref "vector" (0.5,-1,0.1,0),
-		position_viewSpace = ms:ref "vector" (0,0,0,0),
-		ambient = ms:ref "vector" (1,1,1,0.02),
-		diffuse = ms:ref "vector" (1,1,1,0.4),
-		specular = ms:ref "vector" (1,1,1,0),
-		spotdirection = ms:ref "vector" (0,0,0,1),
-		spotdirection_viewSpace = ms:ref "vector" (0,0,0,0),
-		attenuation = ms:ref "vector" (0,0,0,1),
+		position =  math3d.ref (math3d.vector (0.5,-1,0.1,0)),
+		position_viewSpace =  math3d.ref (math3d.vector (0,0,0,0)),
+		ambient =  math3d.ref (math3d.vector (1,1,1,0.02)),
+		diffuse =  math3d.ref (math3d.vector (1,1,1,0.4)),
+		specular =  math3d.ref (math3d.vector (1,1,1,0)),
+		spotdirection =  math3d.ref (math3d.vector (0,0,0,1)),
+		spotdirection_viewSpace =  math3d.ref (math3d.vector (0,0,0,0)),
+		attenuation =  math3d.ref (math3d.vector (0,0,0,1)),
 	}
 
-	ctx.m_color = ms:ref "vector" (1,1,1,1)
+	ctx.m_color =  math3d.ref (math3d.vector (1,1,1,1))
 
 	ctx.m_shadowMapMtx = {}
 
 	Uniforms.materialPtr = ctx.m_defaultMaterial
 	Uniforms.lightPtr = ctx.m_pointLight
 	Uniforms.colorPtr = ctx.m_color
-	ctx.m_lightMtx = ms:ref "matrix"
+	ctx.m_lightMtx =  math3d.ref (math3d.matrix())
 	Uniforms.lightMtxPtr = ctx.m_lightMtx
 	for i = 1, 4 do
-		ctx.m_shadowMapMtx[i] = ms:ref "matrix"
+		ctx.m_shadowMapMtx[i] = math3d.ref (math3d.matrix())
 	end
 	Uniforms.shadowMapMtx0 = ctx.m_shadowMapMtx[1]
 	Uniforms.shadowMapMtx1 = ctx.m_shadowMapMtx[2]
@@ -2171,8 +2179,8 @@ function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(ctx.width,ctx.height, "v")
-	ctx.view = ms:ref "matrix" ( ms ( {0, 35, -60}, {0,5,0} , "lP" ) )
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 2000 }
+	ctx.view = math3d.ref(math3d.lookat( {0, 35, -60}, {0,5,0}))
+	ctx.proj = math3d.ref(math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 2000 })
 
 	ctx.projHeight = math.tan(math.rad(60)*0.5)
 	ctx.projWidth = ctx.projHeight * (ctx.width/ctx.height)

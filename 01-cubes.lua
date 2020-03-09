@@ -13,8 +13,6 @@ local ctx = {
 	},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "01-cubes",
@@ -23,12 +21,12 @@ local dlg = iup.dialog {
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.001
 	for yy = 0, 10 do
 		for xx = 0, 10 do
-			bgfx.set_transform( ms:srtmat ( nil, { time + xx*0.21, time + yy*0.37, 0 }, { -15.0 + xx * 3, -15.0 + yy * 3, 0 }))
+			bgfx.set_transform { r = { x = time + xx*0.21, y = time + yy*0.37, z = 0 }, t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 } }
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
 			bgfx.set_state(ctx.state)
@@ -72,8 +70,10 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
 	-- calc lookat matrix, return matrix pointer, and remove top
-	local viewmat = ms({0,0,-35}, {0, 0, 0}, "lP")
-	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
+
+	local eyepos, at = math3d.vector(0,0,-35), math3d.vector(0, 0, 0)
+	local viewmat = math3d.lookat(eyepos, at)
+	local projmat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 

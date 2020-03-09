@@ -9,8 +9,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "03-raymarch",
@@ -42,17 +40,18 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 
-	local vp = ms(ctx.projmat, ctx.viewmat, "*P")
-	local mtx = ms:srtmat ( nil, { time , time * 0.37, 0 } , nil )
-	local lightDirTime = ms(mtx, "i", {-0.4, -0.5, -1.0, 0} , "n*T")
+	local vp = math3d.mul(ctx.projmat, ctx.viewmat)
+	local mtx = math3d.matrix { r = { x = time , y = time * 0.37, z = 0 } }
+	local lightDirModelN = math3d.normalize(math3d.vector {-0.4, -0.5, -1.0, 0} )
+	local lightDirTime = math3d.totable(math3d.mul(math3d.inverse(mtx) , lightDirModelN))
 	lightDirTime[4] = time
 
-	bgfx.set_uniform(ctx.u_lightDirTime, lightDirTime)
-	local invMvp = ms(vp, mtx,"*iP")
+	bgfx.set_uniform(ctx.u_lightDirTime, math3d.vector(lightDirTime))
+	local invMvp = math3d.inverse(math3d.mul(vp, mtx))
 	bgfx.set_uniform(ctx.u_mtx, invMvp)
 
 	renderScreenSpaceQuad(0.0, 0.0, 1280.0, 720.0)
@@ -83,10 +82,10 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 	bgfx.reset(w,h, "v")
 
-	ms(ctx.viewmat, {0,0,-15}, {0, 0, 0}, "l=")
-	ms(ctx.projmat, { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "=")
+	ctx.viewmat.mat = math3d.lookat( {0,0,-15}, {0, 0, 0} )
+	ctx.projmat.mat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, ctx.viewmat, ctx.projmat)
-	local orthomat = ms({ type = "mat", ortho = true, l = 0.0, r= 1280.0, b = 720.0, t = 0.0, n = 0.0, f = 100.0 }, "P")
+	local orthomat = math3d.projmat { ortho = true, l = 0.0, r= 1280.0, b = 720.0, t = 0.0, n = 0.0, f = 100.0 }
 	bgfx.set_view_transform(1, nil, orthomat)
 end
 

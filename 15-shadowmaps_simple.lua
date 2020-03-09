@@ -16,20 +16,18 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
-
 local RENDER_SHADOW_PASS_ID = 0
 local RENDER_SCENE_PASS_ID = 1
 
-local vec0 = math3d.constant "identvec"
+local vec0 = math3d.vector()
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	time = time + 0.01
 	bgfx.touch(0)
 
 --	Setup lights.
-	local lightPos = ms:vector (
+	local lightPos = math3d.vector (
 		-math.cos(time),
 		-1,
 		-math.sin(time),
@@ -37,19 +35,19 @@ local function mainloop()
 	bgfx.set_uniform(ctx.u_lightPos, lightPos)
 
 --	Setup instance matrices.
-	local mtxFloor = ms:srtmat( {30.0, 30.0, 30.0}, nil, nil )
+	local mtxFloor = math3d.matrix { s = 30 }
 
-	local mtxBunny = ms:srtmat( {5,5,5}, {0,math.pi - time, 0}, {15,5,0} )
+	local mtxBunny = math3d.matrix { s = 5, r = { x=0,y=math.pi - time, z=0}, t={15,5,0} }
 
-	local mtxHollowcube = ms:srtmat( { 2.5, 2.5, 2.5 }, { 0.0, 1.56 - time, 0.0 }, { 0.0, 10.0, 0.0 } )
+	local mtxHollowcube = math3d.matrix { s = 2.5, r = { x = 0.0, y = 1.56 - time, z = 0.0 }, t = { 0.0, 10.0, 0.0 } }
 
-	local mtxCube = ms:srtmat( { 2.5, 2.5, 2.5 }, { 0.0, 1.56 - time, 0.0 }, { -15.0, 5.0, 0.0 } )
+	local mtxCube = math3d.matrix { s = 2.5 , r = { x = 0.0, y = 1.56 - time, z = 0.0 }, t = { -15.0, 5.0, 0.0 } }
 
 --	Define matrices.
-	local lightView = ms( vec0, lightPos, "-", vec0, "lP")
+	local lightView = math3d.lookat ( math3d.sub( vec0, lightPos ) , vec0)
 
 	local area = 30.0
-	local lightProj = ms:matrix { type = "mat", ortho = true, l = -area, r = area, b = -area, t = area, n = -100, f = 100 }
+	local lightProj = math3d.projmat { ortho = true, l = -area, r = area, b = -area, t = area, n = -100, f = 100 }
 
 	bgfx.set_view_rect(RENDER_SHADOW_PASS_ID, 0, 0, ctx.m_shadowMapSize, ctx.m_shadowMapSize)
 	bgfx.set_view_frame_buffer(RENDER_SHADOW_PASS_ID, ctx.m_shadowMapFB)
@@ -62,7 +60,9 @@ local function mainloop()
 	bgfx.set_view_clear(RENDER_SHADOW_PASS_ID, "CD",0x303030ff, 1.0, 0)
 	bgfx.set_view_clear(RENDER_SCENE_PASS_ID, "CD",0x303030ff, 1.0, 0)
 
-	local mtxTmp, mtxShadow, lightMtx = ms(ctx.mtxCrop, lightProj, "*1P", lightView, "*1P", mtxFloor, "*P")
+	local mtxTmp =math3d.mul(ctx.mtxCrop, lightProj)
+	local mtxShadow = math3d.mul(mtxTmp, lightView)
+	local lightMtx = math3d.mul(mtxShadow, mtxFloor)
 
 --	Floor.
 	for pass =1, 2 do
@@ -79,21 +79,21 @@ local function mainloop()
 	end
 
 --	Bunny.
-	lightMtx = ms(mtxShadow , mtxBunny, "*P")
+	lightMtx = math3d.mul(mtxShadow , mtxBunny)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_bunny, ctx.m_state[1], mtxBunny)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_bunny, ctx.m_state[2], mtxBunny)
 
 --	Hollow cube.
-	lightMtx = ms(mtxShadow, mtxHollowcube, "*P")
+	lightMtx = math3d.mul(mtxShadow, mtxHollowcube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_hollowcube, ctx.m_state[1], mtxHollowcube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_hollowcube, ctx.m_state[2], mtxHollowcube)
 
 --	Cube.
-	lightMtx = ms(mtxShadow, mtxCube, "*P")
+	lightMtx = math3d.mul(mtxShadow, mtxCube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
 	util.meshSubmitState(ctx.m_cube, ctx.m_state[1], mtxCube)
 	bgfx.set_uniform(ctx.u_lightMtx, lightMtx)
@@ -113,9 +113,9 @@ function ctx.init()
 	ctx.u_depthScaleOffset = bgfx.create_uniform("u_depthScaleOffset", "v4")
 
 	if util.caps.homogeneousDepth then
-		bgfx.set_uniform(ctx.u_depthScaleOffset, ms:vector(1, 0, 0, 0))
+		bgfx.set_uniform(ctx.u_depthScaleOffset, math3d.vector(1, 0, 0, 0))
 	else
-		bgfx.set_uniform(ctx.u_depthScaleOffset, ms:vector(0.5, 0.5, 0, 0))
+		bgfx.set_uniform(ctx.u_depthScaleOffset, math3d.vector(0.5, 0.5, 0, 0))
 	end
 
 --	Create vertex stream declaration.
@@ -228,20 +228,20 @@ function ctx.init()
 	local sz = util.caps.homogeneousDepth and 0.5 or 1
 	local tz = util.caps.homogeneousDepth and 0.5 or 0
 
-	ctx.mtxCrop = ms:ref "matrix" (
+	ctx.mtxCrop = math3d.ref(math3d.matrix (
 		0.5, 0.0, 0.0, 0.0,
 		0.0,  sy, 0.0, 0.0,
 		0.0, 0.0,  sz, 0.0,
 		0.5, 0.5,  tz, 1.0
-	)
+	))
 end
 
 function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(ctx.width,ctx.height, "vmx")
-	ctx.view = ms:ref "matrix" (ms( { 0,30,-60 }, { 0,5,0 }, "lP"))
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+	ctx.view = math3d.ref(math3d.lookat( { 0,30,-60 }, { 0,5,0 }))
+	ctx.proj = math3d.ref(math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 })
 end
 
 util.init(ctx)

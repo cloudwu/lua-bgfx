@@ -10,8 +10,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "06-bump",
@@ -23,7 +21,7 @@ local time = 0
 local function setlight()
 	local light = {}
 	for i=1,ctx.numLights do
-		light[i] = ms:vector ( math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
+		light[i] = math3d.vector ( math.sin(time*(0.1+i*0.17) + i * math.pi * 1.37) * 3,
 			math.cos(time*(0.2+i*0.29) + i * math.pi * 1.49) * 3,
 			-2.5, 3 )
 	end
@@ -33,7 +31,7 @@ local function setlight()
 end
 
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 
@@ -41,7 +39,7 @@ local function mainloop()
 
 	for yy=0,2 do
 		for xx=0,2 do
-			bgfx.set_transform(ms:srtmat(nil, { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 }, { -3+xx*3, -3+yy*3, 0 } ))
+			bgfx.set_transform { r =  { x = time*0.023 + xx*0.21, y= time*0.03 + yy*0.37, z =0 }, t = { -3+xx*3, -3+yy*3, 0 } }
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
 			bgfx.set_texture(0, ctx.s_texColor, ctx.textureColor)
@@ -54,7 +52,7 @@ local function mainloop()
 end
 
 local function mainloop_instancing()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 
@@ -63,7 +61,7 @@ local function mainloop_instancing()
 	ctx.idb:alloc(9)
 	for yy= 0,2 do
 		for xx=0,2 do
-			ctx.idb(yy*3+xx, ms:srtmat(nil, { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 },{ -3+xx*3, -3+yy*3, 0 } ) )
+			ctx.idb(yy*3+xx, math3d.matrix{ r = { x = time*0.023 + xx*0.21, y = time*0.03 + yy*0.37, z = 0 }, t = { -3+xx*3, -3+yy*3, 0 } })
 		end
 	end
 	ctx.idb:set()
@@ -150,10 +148,10 @@ function ctx.init()
 	ctx.textureNormal = util.textureLoad "textures/fieldstone-n.dds"
 
 	ctx.lightRgbInnerR = {
-		ms:ref "vector" ( 1.0, 0.7, 0.2, 0.8 ),
-		ms:ref "vector" ( 0.7, 0.2, 1.0, 0.8 ),
-		ms:ref "vector" ( 0.2, 1.0, 0.7, 0.8 ),
-		ms:ref "vector" ( 1.0, 0.4, 0.2, 0.8 ),
+		math3d.ref(math3d.vector( 1.0, 0.7, 0.2, 0.8 )),
+		math3d.ref(math3d.vector( 0.7, 0.2, 1.0, 0.8 )),
+		math3d.ref(math3d.vector( 0.2, 1.0, 0.7, 0.8 )),
+		math3d.ref(math3d.vector( 1.0, 0.4, 0.2, 0.8 )),
 	}
 
 	if util.caps.supported.INSTANCING then
@@ -170,8 +168,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms( { 0.0, 0.0, -7.0 }, {  0,0,0 }, "lP")
-	local projmat = ms( { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
+	local viewmat = math3d.lookat( { 0.0, 0.0, -7.0 }, {  0,0,0 })
+	local projmat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 
 	bgfx.set_view_transform(0, viewmat, projmat)
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)

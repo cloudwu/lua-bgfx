@@ -9,8 +9,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "02-metaballs",
@@ -425,7 +423,7 @@ local invdim = 1/(DIMS-1)
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 	local numVertices = 0
@@ -524,7 +522,7 @@ local function mainloop()
 		end
 	end
 
-	bgfx.set_transform(ms:srtmat ( nil, { time * 0.67, time, 0 } , nil) )
+	bgfx.set_transform { r =  { x = time * 0.67, y= time, z = 0 } }
 	ctx.tvb:setV(0, 0, numVertices)
 	bgfx.set_state()	-- default state
 	-- { WRITE_MASK = "RGBAZ", DEPTH_TEST = "LESS", CULL = "CW", MSAA = true }
@@ -554,8 +552,8 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.reset(w,h, "vmx")
 
-	local viewmat = ms({0,0,-50,1}, {0, 0, 0, 1}, "lP")
-	local projmat = ms({ type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }, "P")
+	local viewmat = math3d.lookat( { 0,0, -50, 0 }, {0,0,0} )
+	local projmat = math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 }
 
 	bgfx.set_view_transform(0, viewmat, projmat)
 end

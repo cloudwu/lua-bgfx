@@ -5,10 +5,6 @@ local util = {}
 local iup = require "iuplua"
 local bgfx = require "bgfx"
 local adapter = require "mathadapter"
-local math3d = require "math3d"
-
-util.mathstack = math3d.new()
-adapter(util.mathstack)
 
 local function save_ppm(filename, data, width, height, pitch)
 	local f = assert(io.open(filename, "wb"))

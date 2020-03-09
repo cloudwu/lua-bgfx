@@ -66,21 +66,19 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
-
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 
-	local view = ms( {0,2, - settings.distance}, {0,1,0} , "lP")
+	local view = math3d.lookat( {0,2, - settings.distance}, {0,1,0})
 	bgfx.set_view_transform(0, view, ctx.proj)
-	local mtx = ms:srtmat( {0.1, 0.1, 0.1} , nil, nil )
+	local mtx = math3d.matrix { s = 0.1 }
 
 	local currentLODframe = settings.transitions and (32- ctx.m_transitionFrame) or 32
 	local mainLOD = settings.transitions and ctx.m_currLod or ctx.m_targetLod
 
-	local stipple = ms:vector ( 0, -1, currentLODframe * 4 / 255 - 1/255, 0 )
-	local stippleInv = ms:vector ( 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255, 0 )
+	local stipple = math3d.vector ( 0, -1, currentLODframe * 4 / 255 - 1/255, 0 )
+	local stippleInv = math3d.vector ( 31 * 4 /255, 1, ctx.m_transitionFrame * 4/255 - 1/255, 0 )
 
 	bgfx.set_texture(0, ctx.s_texColor, ctx.m_textureBark)
 	bgfx.set_texture(1, ctx.s_texStipple, ctx.m_textureStipple)
@@ -192,7 +190,7 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 	bgfx.set_view_rect(0, 0, 0, w, h)
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60,  aspect = w/h , n = 0.1, f = 100 }
+	ctx.proj = math3d.ref( math3d.projmat { fov = 60,  aspect = w/h , n = 0.1, f = 100 } )
 end
 
 util.init(ctx)
