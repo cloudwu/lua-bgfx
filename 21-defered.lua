@@ -136,10 +136,9 @@ local ScissorRect_state = bgfx.make_state {
 					BLEND = "ALPHA"
 				}
 
-local ms = util.mathstack
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	time = time + settings.lightAnimationSpeed * 0.1
 
 	-- Setup views
@@ -150,17 +149,17 @@ local function mainloop()
 
 		bgfx.set_view_transform(RENDER_PASS_GEOMETRY_ID, ctx.view, ctx.proj)
 
-		vp = ms(ctx.proj, ctx.view, "*P")
+		vp = math3d.mul(ctx.proj, ctx.view)
 
 		bgfx.set_view_transform(RENDER_PASS_LIGHT_ID, nil, ctx.ortho)
 		bgfx.set_view_transform(RENDER_PASS_COMBINE_ID, nil, ctx.ortho)
 
 		local size = 10
 		local aspectRatio = ctx.height / ctx.width
-		local o = ms( { type = "mat", ortho = true, l = -size, r = size, b = size * aspectRatio, t = -size * aspectRatio, n = 0, f = 1000 }, "P")
+		local o = math3d.projmat { ortho = true, l = -size, r = size, b = size * aspectRatio, t = -size * aspectRatio, n = 0, f = 1000 }
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_GBUFFER_ID, nil, o)
 
-		local o = ms( { type = "mat", ortho = true, l = 0, r = ctx.width, b = 0, t = ctx.height, n = 0, f = 1000 }, "P")
+		local o = math3d.projmat { ortho = true, l = 0, r = ctx.width, b = 0, t = ctx.height, n = 0, f = 1000 }
 		bgfx.set_view_transform(RENDER_PASS_DEBUG_LIGHTS_ID, nil, o)
 	end
 
@@ -170,13 +169,13 @@ local function mainloop()
 	-- Draw into geometry pass.
 	for yy = 0, dim-1 do
 		for xx = 0, dim-1 do
-			local s,r,t
+			local r,t
 			if settings.animateMesh then
 				r = { time * 1.023 + xx*0.21, time*0.03 + yy* 0.37, 0 }
 			end
 			t = { -offset + xx * 3, -offset + yy * 3, 0 }
 			-- Set transform for draw call.
-			bgfx.set_transform(ms:srtmat(s,r,t))
+			bgfx.set_transform(math3d.matrix { r=r,t=t })
 
 			-- Set vertex and index buffer.
 			bgfx.set_vertex_buffer(ctx.m_vbh)
@@ -215,16 +214,16 @@ local function mainloop()
 			lightPosRadius[3] + lightPosRadius.radius,
 		}
 
-		box[1] = { aabb_min[1], aabb_min[2], aabb_min[3] , 1}
-		box[2] = { aabb_min[1], aabb_min[2], aabb_max[3] , 1}
-		box[3] = { aabb_min[1], aabb_max[2], aabb_min[3] , 1}
-		box[4] = { aabb_min[1], aabb_max[2], aabb_max[3] , 1}
-		box[5] = { aabb_max[1], aabb_min[2], aabb_min[3] , 1}
-		box[6] = { aabb_max[1], aabb_min[2], aabb_max[3] , 1}
-		box[7] = { aabb_max[1], aabb_max[2], aabb_min[3] , 1}
-		box[8] = { aabb_max[1], aabb_max[2], aabb_max[3] , 1}
+		box[1] = { aabb_min[1], aabb_min[2], aabb_min[3] }
+		box[2] = { aabb_min[1], aabb_min[2], aabb_max[3] }
+		box[3] = { aabb_min[1], aabb_max[2], aabb_min[3] }
+		box[4] = { aabb_min[1], aabb_max[2], aabb_max[3] }
+		box[5] = { aabb_max[1], aabb_min[2], aabb_min[3] }
+		box[6] = { aabb_max[1], aabb_min[2], aabb_max[3] }
+		box[7] = { aabb_max[1], aabb_max[2], aabb_min[3] }
+		box[8] = { aabb_max[1], aabb_max[2], aabb_max[3] }
 
-		local xyz = ms (box[1], vp, "%T" )
+		local xyz = math3d.totable(math3d.transformH(vp, box[1], 1))
 
 		local maxx, maxy, maxz = xyz[1], xyz[2], xyz[3]
 
@@ -232,7 +231,7 @@ local function mainloop()
 		local miny = maxy
 
 		for i=2,8 do
-			xyz = ms(box[i], vp, "%T" )
+			xyz = math3d.totable(math3d.transformH(vp, box[i], 1))
 			local x,y,z = xyz[1], xyz[2], xyz[3]
 			minx = math.min(minx, x)
 			miny = math.min(miny, y)
@@ -276,7 +275,7 @@ local function mainloop()
 			end
 
 			local val = light & 7
-			local lightRgbInnerR = ms:vector (
+			local lightRgbInnerR = math3d.vector (
 				(val & 0x1) ~= 0 and 1 or 0.25,
 				(val & 0x2) ~= 0 and 1 or 0.25,
 				(val & 0x4) ~= 0 and 1 or 0.25,
@@ -284,11 +283,11 @@ local function mainloop()
 			)
 
 			-- Draw light.
-			local lightpos = ms:vector ( lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius )
+			local lightpos = math3d.vector ( lightPosRadius[1],lightPosRadius[2],lightPosRadius[3],lightPosRadius.radius )
 
 			bgfx.set_uniform(ctx.u_lightPosRadius, lightpos)
 			bgfx.set_uniform(ctx.u_lightRgbInnerR, lightRgbInnerR)
-			bgfx.set_uniform(ctx.u_mtx, ms(vp, "iP"))
+			bgfx.set_uniform(ctx.u_mtx, math3d.inverse(vp))
 			local scissorHeight = y1-y0
 			bgfx.set_scissor(math.floor(x0), math.floor(ctx.height - scissorHeight - y0), math.floor(x1-x0), math.floor(scissorHeight))
 			bgfx.set_texture(0, ctx.s_normal, bgfx.get_texture(ctx.m_gbuffer, 1))
@@ -316,7 +315,10 @@ local function mainloop()
 		-- Draw m_debug m_gbuffer.
 		local count = #ctx.m_gbufferTex
 		for ii = 1, count do
-			bgfx.set_transform(ms:srtmat({ aspectRatio, 1, 1 }, nil, { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 }))
+			bgfx.set_transform(math3d.matrix {
+				s = { aspectRatio, 1, 1 },
+				r = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 }
+			} )
 			bgfx.set_vertex_buffer(ctx.m_vbh)
 			bgfx.set_index_buffer(ctx.m_ibh, 0, 6)
 			bgfx.set_texture(0, ctx.s_texColor, ctx.m_gbufferTex[ii])
@@ -499,10 +501,10 @@ function ctx.resize(w,h)
 	bgfx.destroy(ctx.m_lightBuffer)
 	ctx.m_lightBuffer = bgfx.create_frame_buffer(w,h,"BGRA8", samplerFlags)
 
-	ctx.view = ms:ref "matrix" ( ms ( { 0.0, 0.0, -15.0, }, { 0,0,0 }, "lP" ) )
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h , n = 0.1, f = 100 }
-	ctx.ortho = ms:ref "matrix" { type = "mat", ortho = true,
-		l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 }
+	ctx.view = math3d.ref(math3d.lookat( { 0.0, 0.0, -15.0, }, { 0,0,0 } ) )
+	ctx.proj = math3d.ref(math3d.projmat { fov = 60, aspect = w/h , n = 0.1, f = 100 })
+	ctx.ortho = math3d.ref(math3d.projmat { ortho = true,
+		l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 })
 
 	bgfx.set_view_rect(RENDER_PASS_GEOMETRY_ID,      0, 0, w, h )
 	bgfx.set_view_rect(RENDER_PASS_LIGHT_ID,         0, 0, w, h )

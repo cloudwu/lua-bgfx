@@ -116,11 +116,9 @@ local function screenSpaceQuad(textureWidth, textureHeight, originBottomLeft)
 	ctx.tvb:set()
 end
 
-local ms = util.mathstack
-
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	time = time + 0.01
 	-- Set palette color for index 0
 	bgfx.set_palette_color(0, 0, 0, 0, 0)
@@ -155,11 +153,11 @@ local function mainloop()
 				if settings.fadeInOut and zz == 1 then
 					w = math.sin(time*3.0)*0.49+0.5
 				end
-				local color = ms:vector(xx/3, zz/3, yy/3, w)
+				local color = math3d.vector(xx/3, zz/3, yy/3, w)
 
 				bgfx.set_uniform(ctx.u_color, color)
 
-				local mtx = ms:srtmat( nil, {time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0}, {-2.5+xx*2.5, -2.5+yy*2.5, -2.5+zz*2.5} )
+				local mtx = math3d.matrix { r = {time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0}, t = {-2.5+xx*2.5, -2.5+yy*2.5, -2.5+zz*2.5} }
 
 				-- Set transform for draw call.
 				bgfx.set_transform(mtx)
@@ -305,14 +303,13 @@ function ctx.resize(w,h)
 	bgfx.set_view_rect(0, 0, 0, w, h)
 	bgfx.set_view_rect(1, 0, 0, w, h)
 
-	local viewmat = ms( {0,0,-7}, {0,0,0} , "lP")
-	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+	local viewmat = math3d.lookat ( {0,0,-7}, {0,0,0} )
+	local projmat = math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 
-
 	-- Set view and projection matrix for view 1.
-	local viewmat1 = math3d.constant "identmat"
-	local projmat1 = ms:matrix { type = "mat", ortho = true, l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 }
+	local viewmat1 = math3d.matrix()
+	local projmat1 = math3d.projmat { ortho = true, l = 0, r = 1, b = 1, t = 0, n = 0, f = 100 }
 	bgfx.set_view_transform(1, viewmat1, projmat1)
 end
 
