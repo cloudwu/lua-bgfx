@@ -45,12 +45,11 @@ local function mainloop()
 	time = time + 0.01
 
 	local vp = math3d.mul(ctx.projmat, ctx.viewmat)
-	local mtx = math3d.matrix { r = { x = time , y = time * 0.37, z = 0 } }
-	local lightDirModelN = math3d.normalize(math3d.vector {-0.4, -0.5, -1.0, 0} )
-	local lightDirTime = math3d.totable(math3d.mul(math3d.inverse(mtx) , lightDirModelN))
-	lightDirTime[4] = time
+	local mtx = math3d.matrix { r = { time , time * 0.37, 0 } }
+	local lightDirModelN = math3d.normalize(math3d.vector (-0.4, -0.5, -1.0))
+	local lightDirTime = math3d.transform(math3d.inverse(mtx) , lightDirModelN, 0)
 
-	bgfx.set_uniform(ctx.u_lightDirTime, math3d.vector(lightDirTime))
+	bgfx.set_uniform(ctx.u_lightDirTime, math3d.vector(lightDirTime, time)) --	lightDirTime[4] = time
 	local invMvp = math3d.inverse(math3d.mul(vp, mtx))
 	bgfx.set_uniform(ctx.u_mtx, invMvp)
 
@@ -71,8 +70,8 @@ function ctx.init()
 	ctx.u_mtx = bgfx.create_uniform("u_mtx", "m4")
 	ctx.u_lightDirTime = bgfx.create_uniform("u_lightDirTime", "v4")
 	ctx.tb = bgfx.transient_buffer "fffdff"
-	ctx.viewmat = math3d.ref "matrix"
-	ctx.projmat = math3d.ref "matrix"
+	ctx.viewmat = math3d.ref(math3d.matrix())
+	ctx.projmat = math3d.ref(math3d.matrix())
 end
 
 function ctx.resize(w,h)

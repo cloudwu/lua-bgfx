@@ -1041,29 +1041,25 @@ local function worldSpaceFrustumCorners(out,near, far, projWidth, projHeight, in
 	local fh = far * projHeight
 
 	local numCorners = 8
-	corners[1] = math3d.vector (-nw,  nh, near ,1)
-	corners[2] = math3d.vector ( nw,  nh, near ,1)
-	corners[3] = math3d.vector ( nw, -nh, near ,1)
-	corners[4] = math3d.vector (-nw, -nh, near ,1)
-	corners[5] = math3d.vector (-fw,  fh, far  ,1)
-	corners[6] = math3d.vector ( fw,  fh, far  ,1)
-	corners[7] = math3d.vector ( fw, -fh, far ,1)
-	corners[8] = math3d.vector (-fw, -fh, far ,1)
+	corners[1] = math3d.vector (-nw,  nh, near)
+	corners[2] = math3d.vector ( nw,  nh, near)
+	corners[3] = math3d.vector ( nw, -nh, near)
+	corners[4] = math3d.vector (-nw, -nh, near)
+	corners[5] = math3d.vector (-fw,  fh, far )
+	corners[6] = math3d.vector ( fw,  fh, far )
+	corners[7] = math3d.vector ( fw, -fh, far )
+	corners[8] = math3d.vector (-fw, -fh, far )
 
 	-- Convert them to world space.
 	for i = 1, numCorners do
-		out[i] = math3d.mul ( invViewMtx, corners[i] )	-- out[i] = corners[i] * invViewMtx
+		out[i] = math3d.transform ( invViewMtx, corners[i], 1 )	-- out[i] = corners[i] * invViewMtx
 	end
 end
 
 local function computeViewSpaceComponents(light, mtx)
-	light.position_viewSpace.v = math3d.mul(mtx, light.position)
-	local v = light.spotdirection.v
-	local v4 = v[4]
-	v[4] = 0
-	local r = math3d.totable(math3d.mul(mtx, math3d.vector(v)))
-	r[4] = v4
-	light.spotdirection_viewSpace.v = r
+	light.position_viewSpace.v = math3d.transform(mtx, light.position, nil)
+	local r = math3d.transform(mtx, light.spotdirection , 0)
+	light.spotdirection_viewSpace.v = math3d.vector(r, light.spotdirection[4])
 end
 
 local function mtxBillboard(view, pos, s0,s1,s2)
@@ -1267,21 +1263,21 @@ local function mainloop()
 	local floorScale = 550.0
 	local mtxFloor = math3d.matrix { s = floorScale }
 	local mtxBunny = math3d.matrix { s = 5,
-					r = {x = 0.0 , y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0 },
+					r = { 0.0 , 1.56 - ctx.m_timeAccumulatorScene, 0.0 },
 					t = {15.0, 5.0, 0.0 } }
 
 	local mtxHollowcube = math3d.matrix { s = 2.5 ,
-					r = { x = 0.0, y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0 },
+					r = { 0.0, 1.56 - ctx.m_timeAccumulatorScene, 0.0 },
 					t = { 0.0, 10.0, 0.0 } }
 
 	local mtxCube = math3d.matrix { s = 2.5,
-					r = { x = 0.0, y = 1.56 - ctx.m_timeAccumulatorScene, z = 0.0},
+					r = { 0.0, 1.56 - ctx.m_timeAccumulatorScene, 0.0},
 					t = { -15.0, 5.0, 0.0 } }
 
 	local numTrees = 10
 	for i = 1, 	numTrees do
 		mtxTrees[i] = math3d.matrix { s = 2,
-						r = { x = 0 , y = i-1 , z = 0 },
+						r = { 0 , i-1 , 0 },
 						t = { math.sin((i-1)*2*math.pi/numTrees ) * 60
 						   , 0.0
 						   , math.cos((i-1)*2*math.pi/numTrees ) * 60
@@ -1382,12 +1378,11 @@ local function mainloop()
 			t[14] = tmp_y
 			t[15] = tmp_z
 			t[16] = 1
-			lightView[i] = math3d.matrix(t)
+			lightView[i].m = math3d.matrix(t)
 		end
 	else -- "DirectionalLight"
 		-- Setup light view mtx.
-		local px,py,pz = table.unpack(ctx.m_directionalLight.position.v)
-		lightView[1].m = math3d.lookat( {-px,-py,-pz},{0,0,0} )
+		lightView[1].m = math3d.lookat( math3d.inverse(ctx.m_directionalLight.position),{0,0,0} )
 
 		-- Compute camera inverse view mtx.
 		local mtxViewInv = math3d.inverse(view)
@@ -1403,7 +1398,7 @@ local function mainloop()
 		-- Update uniforms.
 
 		-- This lags for 1 frame, but it's not a problem.
-		Uniforms.csmFarDistances.v = { splitSlices[2], splitSlices[4], splitSlices[6], splitSlices[8] }
+		Uniforms.csmFarDistances.v = { splitSlices[2] or 0, splitSlices[4] or 0 , splitSlices[6] or 0 , splitSlices[8] or 0 }
 
 		local mtxProj = math3d.projmat { ortho = true,
 			l=1,r=-1,b=1,t=-1,n=-settings.far,f=settings.far }
@@ -1424,13 +1419,13 @@ local function mainloop()
 
 			worldSpaceFrustumCorners(fc, splitSlices[nn], splitSlices[ff], ctx.projWidth, ctx.projHeight, mtxViewInv)
 
-			local min = { 9000, 9000, 9000 , 1 }
-			local max = { -9000, -9000, -9000 , 1}
+			local min = { 9000, 9000, 9000 }
+			local max = { -9000, -9000, -9000 }
 
 			for j = 1, numCorners do
 				-- Transform to light space.
 				-- Update bounding box.
-				local tmp = math3d.totable(math3d.mul(lightView[1], fc[j]))
+				local tmp = math3d.totable(math3d.transform(lightView[1], fc[j], 1))
 				local v1,v2,v3 = tmp[1], tmp[2], tmp[3]
 				min[1] = math.min(min[1], v1)
 				max[1] = math.max(max[1], v1)
@@ -1440,8 +1435,8 @@ local function mainloop()
 				max[3] = math.max(max[3], v3)
 			end
 
-			local minproj = math3d.totable(math3d.mulH(min, mtxProj))
-			local maxproj = math3d.totable(math3d.mulH(max, mtxProj))
+			local minproj = math3d.totable(math3d.transformH(mtxProj, min))
+			local maxproj = math3d.totable(math3d.transformH(mtxProj, max))
 
 			local max_x, max_y = maxproj[1], maxproj[2]
 			local min_x, min_y = minproj[1], minproj[2]
@@ -1464,13 +1459,13 @@ local function mainloop()
 				offsety = math.ceil(offsety * halfSize) / halfSize
 			end
 
-			lightProj[i].m = math3d.mul(mtxProj,
+			lightProj[i].m = math3d.mul(
 				math3d.matrix {
 					scalex, 0,0,0,
 					0, scaley, 0, 0,
 					0, 0, 1, 0,
 					offsetx, offsety, 0, 1
-				})
+				}, mtxProj)
 		end
 	end
 
@@ -1872,8 +1867,7 @@ local function mainloop()
 			end
 
 			-- lightInvTranslate
-			local vx,vy,vz = table.unpack(ctx.m_pointLight.position.v)
-			mtxShadow = math3d.matrix { t = {-vx,-vy,-vz} }
+			mtxShadow = math3d.matrix { t = math3d.inverse(ctx.m_pointLight.position) }
 		else -- //LightType::DirectionalLight == settings.m_lightType
 			for i = 1, settings.numSplits do
 				ctx.m_shadowMapMtx[i].m =

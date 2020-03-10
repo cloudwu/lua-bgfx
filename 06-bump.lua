@@ -39,7 +39,7 @@ local function mainloop()
 
 	for yy=0,2 do
 		for xx=0,2 do
-			bgfx.set_transform { r =  { x = time*0.023 + xx*0.21, y= time*0.03 + yy*0.37, z =0 }, t = { -3+xx*3, -3+yy*3, 0 } }
+			bgfx.set_transform { r =  { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 }, t = { -3+xx*3, -3+yy*3, 0 } }
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
 			bgfx.set_texture(0, ctx.s_texColor, ctx.textureColor)
@@ -61,7 +61,7 @@ local function mainloop_instancing()
 	ctx.idb:alloc(9)
 	for yy= 0,2 do
 		for xx=0,2 do
-			ctx.idb(yy*3+xx, math3d.matrix{ r = { x = time*0.023 + xx*0.21, y = time*0.03 + yy*0.37, z = 0 }, t = { -3+xx*3, -3+yy*3, 0 } })
+			ctx.idb(yy*3+xx, math3d.matrix{ r = { time*0.023 + xx*0.21, time*0.03 + yy*0.37, 0 }, t = { -3+xx*3, -3+yy*3, 0 } })
 		end
 	end
 	ctx.idb:set()

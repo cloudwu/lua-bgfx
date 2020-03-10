@@ -21,7 +21,7 @@ local function mainloop()
 	bgfx.touch(0)
 	time = time + 0.01
 	bgfx.set_uniform(ctx.u_time, math3d.vector {time,0,0,0})
-	local mtx = math3d.matrix { r = {x = 0, y = time, z = 0} }
+	local mtx = math3d.matrix { r = { 0, time, 0} }
 	bgfx.set_transform(mtx)
 	bgfx.set_state(ctx.state)
 	util.meshSubmit(ctx.mesh, 0, ctx.prog)

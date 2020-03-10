@@ -202,8 +202,8 @@ local function mainloop()
 		bgfx.set_view_transform(i, nil, ctx.ortho)
 	end
 
-	local mtx = math3d.matrix { r = { x = 0, y = time, z =0 } }
-	local view = math3d.lookat( math3d.mul( mtx, math3d.vector( 0,1,-2.5) ) , { 0,1,0 })
+	local mtx = math3d.matrix { r = { 0, time, 0 } }
+	local view = math3d.lookat( math3d.transform(mtx, math3d.vector( 0,1,-2.5) , 1) , { 0,1,0 })
 
 	bgfx.set_view_transform(hdrMesh, view, ctx.proj)
 

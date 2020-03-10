@@ -522,7 +522,7 @@ local function mainloop()
 		end
 	end
 
-	bgfx.set_transform { r =  { x = time * 0.67, y= time, z = 0 } }
+	bgfx.set_transform { r =  { time * 0.67, time, 0 } }
 	ctx.tvb:setV(0, 0, numVertices)
 	bgfx.set_state()	-- default state
 	-- { WRITE_MASK = "RGBAZ", DEPTH_TEST = "LESS", CULL = "CW", MSAA = true }

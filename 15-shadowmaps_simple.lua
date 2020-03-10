@@ -37,11 +37,11 @@ local function mainloop()
 --	Setup instance matrices.
 	local mtxFloor = math3d.matrix { s = 30 }
 
-	local mtxBunny = math3d.matrix { s = 5, r = { x=0,y=math.pi - time, z=0}, t={15,5,0} }
+	local mtxBunny = math3d.matrix { s = 5, r = { 0, math.pi - time, 0}, t={15,5,0} }
 
-	local mtxHollowcube = math3d.matrix { s = 2.5, r = { x = 0.0, y = 1.56 - time, z = 0.0 }, t = { 0.0, 10.0, 0.0 } }
+	local mtxHollowcube = math3d.matrix { s = 2.5, r = { 0.0, 1.56 - time, 0.0 }, t = { 0.0, 10.0, 0.0 } }
 
-	local mtxCube = math3d.matrix { s = 2.5 , r = { x = 0.0, y = 1.56 - time, z = 0.0 }, t = { -15.0, 5.0, 0.0 } }
+	local mtxCube = math3d.matrix { s = 2.5 , r = { 0.0, 1.56 - time, 0.0 }, t = { -15.0, 5.0, 0.0 } }
 
 --	Define matrices.
 	local lightView = math3d.lookat ( math3d.sub( vec0, lightPos ) , vec0)

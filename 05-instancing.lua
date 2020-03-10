@@ -26,7 +26,7 @@ local function mainloop()
 	for yy=0,10 do
 		for xx=0,10 do
 			local mtx = math3d.matrix {
-				r = { x = time + xx* 0.21 , y = time + yy * 0.37, z = 0 },
+				r = { time + xx* 0.21 , time + yy * 0.37, 0 },
 				t = { -15.0 + xx*3.0, -15.0 + yy*3.0, 0.0 },
 			}
 			local color = math3d.vector(
