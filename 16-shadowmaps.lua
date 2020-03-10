@@ -1219,17 +1219,12 @@ local function mainloop()
 		--	float m_z;
 		--	float m_inner;
 	if settings.lightType == "SpotLight" then
-		local t = ctx.m_pointLight.attenuation.v
-		t[4] = settings.spotOuterAngle
-		ctx.m_pointLight.attenuation.v = t
+		ctx.m_pointLight.attenuation.v = math3d.vector(ctx.m_pointLight.attenuation, settings.spotOuterAngle)
 
-		local t = ctx.m_pointLight.spotdirection.v
-		t[4] = settings.spotInnerAngle
-		ctx.m_pointLight.spotdirection.v = t
+		ctx.m_pointLight.spotdirection.v = math3d.vector(ctx.m_pointLight.spotdirection, settings.spotInnerAngle)
 	else
-		local t = ctx.m_pointLight.attenuation.v
-		t[4] = 91 --above 90.0f means point light
-		ctx.m_pointLight.attenuation.v = t
+		--above 90.0f means point light
+		ctx.m_pointLight.attenuation.v = math3d.vector(ctx.m_pointLight.attenuation, 91)
 	end
 
 	submitPerFrameUniforms()
@@ -1459,13 +1454,14 @@ local function mainloop()
 				offsety = math.ceil(offsety * halfSize) / halfSize
 			end
 
-			lightProj[i].m = math3d.mul(
-				math3d.matrix {
-					scalex, 0,0,0,
-					0, scaley, 0, 0,
-					0, 0, 1, 0,
-					offsetx, offsety, 0, 1
-				}, mtxProj)
+			local mtxCrop = math3d.matrix {
+				scalex, 0,0,0,
+				0, scaley, 0, 0,
+				0, 0, 1, 0,
+				offsetx, offsety, 0, 1
+			}
+
+			lightProj[i].m = math3d.mul(mtxProj , mtxCrop)
 		end
 	end
 
