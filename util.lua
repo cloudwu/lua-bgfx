@@ -4,6 +4,7 @@ local util = {}
 
 local iup = require "iuplua"
 local bgfx = require "bgfx"
+local math3d = require "math3d"
 local adapter = require "mathadapter"
 
 local function save_ppm(filename, data, width, height, pitch)
@@ -267,6 +268,7 @@ function util.init(args)
 			backBufferDS = args.backBufferDS,
 		}
 		util.caps = bgfx.get_caps()
+		math3d.homogeneous_depth(util.caps.homogeneousDepth)
 		init_shader_path(util.caps)
 		init_flag = true
 		bgfx.set_debug "T"
