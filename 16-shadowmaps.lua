@@ -1246,13 +1246,15 @@ local function mainloop()
 	local x = math.cos(ctx.m_timeAccumulatorLight) * 20
 	local y = 26
 	local z = math.sin(ctx.m_timeAccumulatorLight) * 20
-	ctx.m_pointLight.position.v = { x,y,z }
-	ctx.m_pointLight.spotdirection.v = { -x,-y,-z }
+	ctx.m_pointLight.position.v = { x,y,z, ctx.m_pointLight.position[4] }
+	ctx.m_pointLight.spotdirection.v = { -x,-y,-z, ctx.m_pointLight.spotdirection[4] }
 
 	ctx.m_directionalLight.position.v = {
 		-math.cos(ctx.m_timeAccumulatorLight),
 		-1,
-		-math.sin(ctx.m_timeAccumulatorLight) }
+		-math.sin(ctx.m_timeAccumulatorLight),
+		ctx.m_directionalLight.position[4],
+	}
 
 	-- Setup instance matrices.
 	local floorScale = 550.0
