@@ -24,12 +24,10 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
-
 local windows = {}
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.001
 
@@ -47,7 +45,7 @@ local function mainloop()
 	local count = 0
 	for yy = 0, 10 do
 		for xx = 0, 10 do
-			local mat = ms:srtmat(nil, {time + xx*0.21, time + yy*0.37,0} , {-15.0 + xx * 3, -15.0 + yy * 3, 0})
+			local mat = math3d.matrix { r = {time + xx*0.21, time + yy*0.37,0} , t = {-15.0 + xx * 3, -15.0 + yy * 3, 0} }
 			bgfx.set_transform(mat)
 			bgfx.set_vertex_buffer(ctx.vb)
 			bgfx.set_index_buffer(ctx.ib)
@@ -96,8 +94,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "v")
-	local viewmat = ms( { 0,0,-35 } , {0,0,0}, "lP" )
-	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+	local viewmat = math3d.lookat( { 0,0,-35 } , {0,0,0} )
+	local projmat = math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 
@@ -158,8 +156,8 @@ local function new_window()
 		bgfx.set_view_rect(wnd.viewid, 0, 0, w, h)
 		bgfx.set_view_frame_buffer(wnd.viewid, wnd.fbh)
 
-		local viewmat = ms( { 0,0,-35 }, { 0,0,0 }, "lP")
-		local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+		local viewmat = math3d.lookat( { 0,0,-35 }, { 0,0,0 })
+		local projmat = math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 }
 		bgfx.set_view_transform(wnd.viewid, viewmat, projmat)
 	end
 
