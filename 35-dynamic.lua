@@ -31,19 +31,18 @@ local dlg = iup.dialog {
 }
 
 local tmp = { "fffd" }
-local ms = util.mathstack
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
 
 	do
 		local angle = math.random()
-		local mtx = ms:srtmat( nil, { 0,0, angle }, nil)
+		local mtx = math3d.matrix { r = { 0,0, angle } }
 		for i = 2, 33, 4 do
-			local vec = ms:vector(s_cubeVertices[i], s_cubeVertices[i+1], s_cubeVertices[i+2])
-			vec = ms( mtx, vec, "*T" )
+			local vec = math3d.vector(s_cubeVertices[i], s_cubeVertices[i+1], s_cubeVertices[i+2])
+			vec = math3d.totable(math3d.transform( mtx, vec, 1))
 			tmp[i], tmp[i+1], tmp[i+2] = vec[1],vec[2],vec[3]
 			local r = math.random(0,0xff)
 			local g = math.random(0,0xff)
@@ -60,7 +59,7 @@ local function mainloop()
 
 	for yy = 0, kDimHeight do
 		for xx = 0, kDimWidth do
-			local mtx = ms:srtmat ( nil, {time + xx*0.21, time + yy * 0.37, 0}, {-15.0 + xx * 3, -15.0 + yy * 3, 0} )
+			local mtx = math3d.matrix { r = {time + xx*0.21, time + yy * 0.37, 0}, t = {-15.0 + xx * 3, -15.0 + yy * 3, 0} }
 			-- Set model matrix for rendering.
 			bgfx.set_transform(mtx)
 			-- Set vertex and index buffer.
@@ -119,8 +118,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.reset(ctx.width,ctx.height, "vmx")
-	local viewmat = ms( { 0,0,-35}, { 0,0,0}, "lP")
-	local projmat = ms:matrix { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+	local viewmat = math3d.lookat ( { 0,0,-35}, { 0,0,0})
+	local projmat = math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 

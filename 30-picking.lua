@@ -21,7 +21,6 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
 local canvas = ctx.canvas
 
 function canvas:motion_cb(x,y)
@@ -37,29 +36,29 @@ end
 
 local time = 0
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	time = time + 0.01
 
 	bgfx.set_view_frame_buffer(RENDER_PASS_ID, ctx.m_pickingFB)
 
 	-- Set up picking pass
-	local invViewProj = ms(ctx.proj, ctx.view, "*iP")
+	local invViewProj = math3d.inverse(math3d.mul(ctx.proj, ctx.view))
 
 	-- Mouse coord in NDC
 	local mouseXNDC = ( ctx.mouse_x / ctx.width ) * 2 - 1
 	local mouseYNDC = ( ctx.height - ctx.mouse_y) / ctx.height * 2 - 1
 
-	local mousePosNDC = ms:vector(mouseXNDC, mouseYNDC, 0.0, 1)
-	local pickEye = ms( mousePosNDC, invViewProj, "%P")
+	local mousePosNDC = math3d.vector(mouseXNDC, mouseYNDC, 0.0)
+	local pickEye = math3d.transformH( invViewProj, mousePosNDC, 1 )
 
-	local mousePosNDCEnd = ms:vector ( mouseXNDC, mouseYNDC, 1, 1 )
-	local pickAt = ms ( mousePosNDCEnd, invViewProj, "%P")
+	local mousePosNDCEnd = math3d.vector ( mouseXNDC, mouseYNDC, 1 )
+	local pickAt = math3d.transformH ( invViewProj, mousePosNDCEnd, 1)
 
 	-- Look at our unprojected point
-	local pickView = ms ( pickEye, pickAt, "lP" )
+	local pickView = math3d.lookat ( pickEye, pickAt )
 
 	-- Tight FOV is best for picking
-	local pickProj = ms:matrix { type = "mat", fov = ctx.m_fov , aspect = 1, n = 0.1, f = 100.0 }
+	local pickProj = math3d.projmat { fov = ctx.m_fov , aspect = 1, n = 0.1, f = 100.0 }
 
 	-- View rect and transforms for picking pass
 	bgfx.set_view_rect(RENDER_PASS_ID, 0, 0, ID_DIM, ID_DIM)
@@ -71,11 +70,11 @@ local function mainloop()
 	for mesh = 1,12 do
 		local scale = ctx.m_meshScale[mesh]
 		-- Set up transform matrix for each mesh
-		local mtx = ms:srtmat(
-			{scale,scale,scale} ,
-			{ 0.0, time*0.37*((mesh -1 ) % 2 * 2 - 1), 0.0 },
-			{ ((mesh-1) % 4) - 1.5, ((mesh-1) // 4) - 1.25, 0.0 }
-		)
+		local mtx = math3d.matrix {
+			s = scale,
+			r = { 0.0, time*0.37*((mesh -1 ) % 2 * 2 - 1), 0.0 },
+			t = { ((mesh-1) % 4) - 1.5, ((mesh-1) // 4) - 1.25, 0.0 }
+		}
 
 		-- Submit mesh to both of our render passes
 		-- Set uniform based on if this is the highlighted mesh
@@ -178,7 +177,7 @@ function ctx.init()
 --		local rr = ii
 --		local gg = 0
 --		local bb = 0
-		ctx.m_idsF[ii] = ms:ref "vector" (rr / 255,gg / 255,bb / 255,1)
+		ctx.m_idsF[ii] = math3d.ref(math3d.vector (rr / 255,gg / 255,bb / 255,1) )
 		ctx.m_idsU[rr + (gg << 8) + (bb << 16) + (255 << 24)] = ii	-- map id
 	end
 
@@ -202,8 +201,8 @@ function ctx.init()
 		MSAA = true,
 	}
 
-	ctx.tintBasic = ms:ref "vector" (1,1,1,1)
-	ctx.tintHighlighted = ms:ref "vector" (0.3,0.3,2,1)
+	ctx.tintBasic = math3d.ref(math3d.vector(1,1,1,1))
+	ctx.tintHighlighted = math3d.ref(math3d.vector (0.3,0.3,2,1))
 
 	ctx.mouse_x = 0
 	ctx.mouse_y = 0
@@ -218,8 +217,8 @@ function ctx.resize(w,h)
 	ctx.height = h
 	bgfx.reset(w,h, "v")
 
-	ctx.view = ms:ref "matrix" (ms( { 0,0,-2.5 }, { 0,0,0 }, "lP"))
-	ctx.proj = ms:ref "matrix" { type = "mat", fov = 60, aspect = w/h, n = 0.1, f = 100 }
+	ctx.view = math3d.ref(math3d.lookat( { 0,0,-2.5 }, { 0,0,0 }))
+	ctx.proj = math3d.ref(math3d.projmat { fov = 60, aspect = w/h, n = 0.1, f = 100 } )
 
 	-- Set up view rect and transform for the shaded pass
 	bgfx.set_view_transform(RENDER_PASS_SHADING, ctx.view, ctx.proj)

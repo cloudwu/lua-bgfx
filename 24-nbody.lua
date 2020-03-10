@@ -183,29 +183,28 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
-
 local function packParams()
-	ctx.m_paramsData[1]:pack("fdff",
+	ctx.m_paramsData[1].v = math3d.pack("fdff",
 		settings.timeStep,
 		settings.dispatchSize,
 		settings.gravity,
 		settings.damping)
-	ctx.m_paramsData[2]:pack("ffdf",
+	ctx.m_paramsData[2].v = math3d.pack("ffdf",
 		settings.particleIntensity,
 		settings.particleSize,
 		settings.baseSeed,
 		settings.particlePower)
-	ctx.m_paramsData[3]:pack("fdf",
+	ctx.m_paramsData[3].v = math3d.pack("fdfd",
 		settings.initialSpeed,
 		settings.initialShape,
-		settings.maxAccel)
+		settings.maxAccel,
+		0)
 
 	return ctx.m_paramsData
 end
 
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 
 	local params = packParams()
 	if RESET then
@@ -317,7 +316,7 @@ function ctx.init()
 
 	ctx.m_paramsData = {}
 	for i=1,3 do
-		ctx.m_paramsData[i] = ms:ref "vector"
+		ctx.m_paramsData[i] = math3d.ref(math3d.vector())
 	end
 
 	bgfx.set_uniform(ctx.u_params, table.unpack(packParams()))
@@ -334,8 +333,8 @@ function ctx.resize(w,h)
 	bgfx.reset(w,h, "v")
 	bgfx.set_view_rect(0, 0, 0, w , h)
 
-	local viewmat = ms( { 0,0, -45 }, { 0,0,0 }, "lP")
-	local projmat = ms:matrix { type = "mat", fov = 90, aspect = w/h, n = 0.1, f = 100000 }
+	local viewmat = math3d.lookat( { 0,0, -45 }, { 0,0,0 })
+	local projmat = math3d.projmat { fov = 90, aspect = w/h, n = 0.1, f = 100000 }
 	bgfx.set_view_transform(0, viewmat, projmat)
 end
 

@@ -17,11 +17,10 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local ms = util.mathstack
 local time = 0
 
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 	bgfx.touch(2)
 	time = time + 0.001
@@ -30,7 +29,7 @@ local function mainloop()
 	local offset = -(CUBES_DIM-1) * 3.0 / 2.0
 	for yy = 0, CUBES_DIM-1 do
 		for xx = 0, CUBES_DIM-1 do
-			local mtx = ms:srtmat ( nil, { time + xx*0.21 , time + yy*0.37, 0 }, {offset + xx*3, 0, offset + yy*3} )
+			local mtx = math3d.matrix { r = { time + xx*0.21 , time + yy*0.37, 0 },t = {offset + xx*3, 0, offset + yy*3} }
 			local occlusionQuery = ctx.m_occlusionQueries[yy*CUBES_DIM+xx+1]
 
 			bgfx.set_transform(mtx)
@@ -134,9 +133,9 @@ function ctx.resize(w,h)
 	ctx.width = w
 	ctx.height = h
 	bgfx.reset(ctx.width,ctx.height, "v")
-	local viewmat = ms( { 0,0,-35} , { 0,0,0 }, "lP")
-	local projmat = ms:matrix { type = "mat", fov = 90, aspect = w/h, n = 0.1, f = 10000 }
-	local view2 = ms( { 17.5, 10, -17.5 }, { 0,0,0 }, "lP")
+	local viewmat = math3d.lookat ( { 0,0,-35} , { 0,0,0 } )
+	local projmat = math3d.projmat { fov = 90, aspect = w/h, n = 0.1, f = 10000 }
+	local view2 = math3d.lookat( { 17.5, 10, -17.5 }, { 0,0,0 } )
 
 	bgfx.set_view_rect(0, 0, 0, ctx.width, ctx.height)
 	bgfx.set_view_transform(0, viewmat, projmat)

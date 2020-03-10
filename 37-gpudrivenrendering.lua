@@ -22,8 +22,6 @@ local ctx = {
 	canvas = iup.canvas {},
 }
 
-local ms = util.mathstack
-
 local dlg = iup.dialog {
 	ctx.canvas,
 	title = "37-gpudrivenrendering",
@@ -61,7 +59,7 @@ local s_cubeIndices = {
 local function renderOcclusionBufferPass()
 	-- Setup the occlusion pass projection
 	local projmat = ctx.m_occlusionProj
-	projmat { type = "mat", fov = 60, aspect = ctx.m_hiZwidth/ctx.m_hiZheight, n = 0.1, f = 500 }
+	projmat.m = math3d.matrix { fov = 60, aspect = ctx.m_hiZwidth/ctx.m_hiZheight, n = 0.1, f = 500 }
 	bgfx.set_view_transform(RENDER_PASS_HIZ_ID, ctx.m_mainView, projmat)
 
 	bgfx.set_view_frame_buffer(RENDER_PASS_HIZ_ID, ctx.m_hiZDepthBuffer)
@@ -107,7 +105,7 @@ local function renderDownscalePass()
 
 	for i = 1, ctx.m_noofHiZMips do
 		local coordinateScale = i > 1 and 2.0 or 1.0
-		local inputRendertargetSize = ms:vector( width, height, coordinateScale, coordinateScale)
+		local inputRendertargetSize = math3d.vector( width, height, coordinateScale, coordinateScale)
 		bgfx.set_uniform(ctx.u_inputRTSize, inputRendertargetSize)
 
 		if i > 1 then
@@ -137,11 +135,11 @@ local function renderOccludePropsPass()
 	bgfx.set_buffer(2, ctx.m_drawcallInstanceCounts, "w")
 	bgfx.set_buffer(3, ctx.m_instancePredicates, "w")
 
-	bgfx.set_uniform(ctx.u_inputRTSize, ms:vector(ctx.m_hiZwidth, ctx.m_hiZheight, 1 / ctx.m_hiZwidth, 1/ctx.m_hiZheight))
+	bgfx.set_uniform(ctx.u_inputRTSize, math3d.vector(ctx.m_hiZwidth, ctx.m_hiZheight, 1 / ctx.m_hiZwidth, 1/ctx.m_hiZheight))
 
 	-- store a rounded-up, power of two instance count for the stream compaction step
 	local noofInstancesPowOf2 = 2 ^ (math.floor(math.log(ctx.m_totalInstancesCount) / math.log(2) ) + 1)
-	local cullingConfig = ms:vector( ctx.m_totalInstancesCount, noofInstancesPowOf2 , ctx.m_noofHiZMips, ctx.m_noofProps )
+	local cullingConfig = math3d.vector( ctx.m_totalInstancesCount, noofInstancesPowOf2 , ctx.m_noofHiZMips, ctx.m_noofProps )
 	bgfx.set_uniform(ctx.u_cullingConfig, cullingConfig)
 
 	--set the view/projection transforms so that the compute shader can receive the viewProjection matrix automagically
@@ -198,15 +196,15 @@ local function renderMainPass()
 end
 
 local function mainloop()
-	math3d.reset(ms)
+	math3d.reset()
 	bgfx.touch(0)
 
 	-- todo: support mouse
 	local mainview = ctx.m_mainView
-	mainview( ms( {50,20,65}, {0,0,0}, "lP") )
+	mainview.m =  math3d.lookat( {50,20,65}, {0,0,0})
 
 	local mainproj = ctx.m_mainProj
-	mainproj { type = "mat", fov = 60, aspect = ctx.m_width / ctx.m_height, n = 0.1, f = 500 }
+	mainproj.m = math3d.projmat { fov = 60, aspect = ctx.m_width / ctx.m_height, n = 0.1, f = 500 }
 
 	-- submit drawcalls for all passes
 	renderOcclusionBufferPass()
@@ -221,9 +219,9 @@ function ctx.init(w,h)
 	-- find largest pow of two dims less than backbuffer size
 	ctx.m_hiZwidth  = 2 ^ math.floor(math.log(w,2))
 	ctx.m_hiZheight = 2 ^ math.floor(math.log(h,2))
-	ctx.m_mainView = ms:ref "matrix"
-	ctx.m_mainProj = ms:ref "matrix"
-	ctx.m_occlusionProj = ms:ref "matrix"
+	ctx.m_mainView = math3d.ref(math3d.matrix())
+	ctx.m_mainProj = math3d.ref(math3d.matrix())
+	ctx.m_occlusionProj = math3d.ref(math3d.matrix())
 
 	ctx.vdecl = bgfx.vertex_layout {
 		{ "POSITION", 3, "FLOAT" },
@@ -256,11 +254,11 @@ function ctx.init(w,h)
 		prop.m_indexbufferHandle = bgfx.create_index_buffer(prop.m_indices)
 	end
 
-	local temp1 = ms:vector(-0.5, -0.5, -0.5, 1.0)
-	local temp2 = ms:vector(0.5, 0.5, 0.5, 1.0)
+	local temp1 = math3d.vector(-0.5, -0.5, -0.5)
+	local temp2 = math3d.vector(0.5, 0.5, 0.5)
 	local function minmax(inst)
-		inst.m_bboxMin = ms:ref "vector" ( ms(inst.m_world, temp1, "*P") )
-		inst.m_bboxMax = ms:ref "vector" ( ms(inst.m_world, temp2, "*P") )
+		inst.m_bboxMin = math3d.ref(math3d.transform( inst.m_world, temp1, 1))
+		inst.m_bboxMax = math3d.ref(math3d.transform( inst.m_world, temp2, 1))
 	end
 
 	-- add a ground plane
@@ -276,13 +274,13 @@ function ctx.init(w,h)
 		local inst = {}
 		prop.m_instances = { inst }
 
-		inst.m_world = ms:ref "matrix" (ms:srtmat ( { 100.0, 0.1, 100.0 }, nil, nil ) )
+		inst.m_world = math3d.ref (math3d.matrix { s = { 100.0, 0.1, 100.0 } } )
 
 		minmax(inst)
 
 		ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 		prop.m_materialID = ctx.m_noofMaterials
-		ctx.m_materials[prop.m_materialID] = ms:ref "vector" (0,0.6,0,1)
+		ctx.m_materials[prop.m_materialID] = math3d.ref(math3d.vector(0,0.6,0,1))
 
 		ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 	end
@@ -302,9 +300,9 @@ function ctx.init(w,h)
 			local inst = {}
 			table.insert(prop.m_instances, inst)
 			-- calculate world position
-			inst.m_world = ms:ref "matrix" (ms:srtmat( { 40.0, 10.0, 0.1 },
-				{ 0.0, ( math.random() * 120.0 - 60.0) * 3.1459 / 180.0, 0.0 },
-				{ math.random() * 100.0 - 50.0, 5.0, math.random() * 100.0 - 50.0 }) )
+			inst.m_world = math3d.ref(math3d.matrix { s = { 40.0, 10.0, 0.1 },
+				r ={ 0.0, ( math.random() * 120.0 - 60.0) * 3.1459 / 180.0, 0.0 },
+				t = { math.random() * 100.0 - 50.0, 5.0, math.random() * 100.0 - 50.0 }})
 
 			minmax(inst)
 		end
@@ -313,7 +311,7 @@ function ctx.init(w,h)
 		ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 		prop.m_materialID = ctx.m_noofMaterials
 		--add a "material" for this prop
-		ctx.m_materials[prop.m_materialID] = ms:ref "vector" (0,0,1,0)
+		ctx.m_materials[prop.m_materialID] = math3d.ref(math3d.vector (0,0,1,0))
 
 		ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 	end
@@ -333,17 +331,16 @@ function ctx.init(w,h)
 			for i = 1, prop.m_noofInstances do
 				local inst = {}
 				table.insert(prop.m_instances, inst)
-				inst.m_world = ms:ref "matrix" (ms:srtmat(
-					{ 2.0, 2.0, 2.0 },
-					nil,
-					{math.random() * 100.0 - 50.0, 1.0, math.random() * 100.0 - 50.0}))
+				inst.m_world = math3d.ref (math3d.matrix {
+					s = 2.0,
+					t = {math.random() * 100.0 - 50.0, 1.0, math.random() * 100.0 - 50.0} })
 
 				minmax(inst)
 			end
 
 			ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 			prop.m_materialID = ctx.m_noofMaterials
-			ctx.m_materials[prop.m_materialID] = ms:ref "vector" (1,1,0,1)
+			ctx.m_materials[prop.m_materialID] = math3d.ref(math3d.vector (1,1,0,1))
 			ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 		end
 
@@ -359,17 +356,16 @@ function ctx.init(w,h)
 			for i = 1, prop.m_noofInstances do
 				local inst = {}
 				table.insert(prop.m_instances, inst)
-				inst.m_world = ms:ref "matrix"( ms:srtmat (
-					{ 2.0, 4.0, 2.0 },
-					nil,
-					{ math.random() * 100.0 - 50.0, 2.0, math.random() * 100.0 - 50.0 }))
+				inst.m_world = math3d.ref(math3d.matrix {
+					s = { 2.0, 4.0, 2.0 },
+					t = { math.random() * 100.0 - 50.0, 2.0, math.random() * 100.0 - 50.0 }})
 
 				minmax(inst)
 			end
 
 			ctx.m_noofMaterials = ctx.m_noofMaterials + 1
 			prop.m_materialID = ctx.m_noofMaterials
-			ctx.m_materials[prop.m_materialID] = ms:ref "vector" (1,0,0,1)
+			ctx.m_materials[prop.m_materialID] = math3d.ref(math3d.vector (1,0,0,1) )
 			ctx.m_totalInstancesCount = ctx.m_totalInstancesCount + prop.m_noofInstances
 		end
 	end
@@ -400,13 +396,13 @@ function ctx.init(w,h)
 				local numInstances = prop.m_noofInstances
 
 				for j = 1, numInstances do
-					local v1,v2,v3 = prop.m_instances[j].m_bboxMin:unpack()
+					local v1,v2,v3 = table.unpack(prop.m_instances[j].m_bboxMin.v)
 					table.insert(boundingBoxes, v1)
 					table.insert(boundingBoxes, v2)
 					table.insert(boundingBoxes, v3)
 					table.insert(boundingBoxes, i-1)	-- store the drawcall ID here to avoid creating a separate buffer
 
-					local v1,v2,v3 = prop.m_instances[j].m_bboxMax:unpack()
+					local v1,v2,v3 = table.unpack(prop.m_instances[j].m_bboxMax.v)
 					table.insert(boundingBoxes, v1)
 					table.insert(boundingBoxes, v2)
 					table.insert(boundingBoxes, v3)
@@ -435,7 +431,7 @@ function ctx.init(w,h)
 				local numInstances = prop.m_noofInstances
 
 				for jj = 1, numInstances do
-					local temp = { prop.m_instances[jj].m_world:unpack() }
+					local temp = prop.m_instances[jj].m_world.v
 					temp[4] = ii-1	-- store the drawcall ID here to avoid creating a separate buffer
 					for k = 1, 16 do
 						table.insert(instanceData, temp[k])
