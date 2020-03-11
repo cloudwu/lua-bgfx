@@ -214,14 +214,14 @@ local function mainloop()
 			lightPosRadius[3] + lightPosRadius.radius,
 		}
 
-		box[1] = { aabb_min[1], aabb_min[2], aabb_min[3] }
-		box[2] = { aabb_min[1], aabb_min[2], aabb_max[3] }
-		box[3] = { aabb_min[1], aabb_max[2], aabb_min[3] }
-		box[4] = { aabb_min[1], aabb_max[2], aabb_max[3] }
-		box[5] = { aabb_max[1], aabb_min[2], aabb_min[3] }
-		box[6] = { aabb_max[1], aabb_min[2], aabb_max[3] }
-		box[7] = { aabb_max[1], aabb_max[2], aabb_min[3] }
-		box[8] = { aabb_max[1], aabb_max[2], aabb_max[3] }
+		box[1] = { aabb_min[1], aabb_min[2], aabb_min[3] , 1}
+		box[2] = { aabb_min[1], aabb_min[2], aabb_max[3] , 1}
+		box[3] = { aabb_min[1], aabb_max[2], aabb_min[3] , 1}
+		box[4] = { aabb_min[1], aabb_max[2], aabb_max[3] , 1}
+		box[5] = { aabb_max[1], aabb_min[2], aabb_min[3] , 1}
+		box[6] = { aabb_max[1], aabb_min[2], aabb_max[3] , 1}
+		box[7] = { aabb_max[1], aabb_max[2], aabb_min[3] , 1}
+		box[8] = { aabb_max[1], aabb_max[2], aabb_max[3] , 1}
 
 		local xyz = math3d.totable(math3d.transformH(vp, box[1], 1))
 
@@ -317,7 +317,7 @@ local function mainloop()
 		for ii = 1, count do
 			bgfx.set_transform(math3d.matrix {
 				s = { aspectRatio, 1, 1 },
-				r = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 }
+				t = { -7.9 - count*0.1*0.5 + (ii-1)*2.1*aspectRatio, 4.0, 0 }
 			} )
 			bgfx.set_vertex_buffer(ctx.m_vbh)
 			bgfx.set_index_buffer(ctx.m_ibh, 0, 6)

@@ -388,7 +388,7 @@ local function mainloop()
 	local floorMtx = math3d.matrix { s = {20,20,20} }
 
 	-- Bunny position.
-	local bunnyMtx = math3d.matrix { s = 5, r = { x=0,y=1.56 - ctx.sceneTimeAccumulator, z=0},t= {0,2,0} }
+	local bunnyMtx = math3d.matrix { s = 5, r = { 0, 1.56 - ctx.sceneTimeAccumulator, 0},t= {0,2,0} }
 
 	-- Columns position.
 
@@ -428,7 +428,7 @@ local function mainloop()
 		for ii = 1, numLights do
 			local light = Uniforms.lightPosRadius[ii]
 			reflectedLights[ii].v = light
-			light.v = math3d.mul(ctx.reflectMtx, light)
+			light.v = math3d.transform(ctx.reflectMtx, light, nil)
 		end
 
 		-- Reflect and submit bunny.

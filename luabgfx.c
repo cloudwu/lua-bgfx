@@ -1126,6 +1126,42 @@ lcreateProgram(lua_State *L) {
 	return 1;
 }
 
+/*
+	i BGFX_DISCARD_INDEX_BUFFER
+	v BGFX_DISCARD_VERTEX_STREAMS
+	t BGFX_DISCARD_TEXTURE_SAMPLERS
+	c BGFX_DISCARD_COMPUTE
+	s BGFX_DISCARD_STATE
+*/
+static uint8_t
+discard_flags(lua_State *L, int index) {
+	const char * flags_string = luaL_checkstring(L, index);
+	uint8_t flags = 0;
+	int i;
+	for (i=0;flags_string[i];i++) {
+		switch(flags_string[i]) {
+		case 'i':
+			flags |= BGFX_DISCARD_INDEX_BUFFER;
+			break;
+		case 'v':
+			flags |= BGFX_DISCARD_VERTEX_STREAMS;
+			break;
+		case 't':
+			flags |= BGFX_DISCARD_TEXTURE_SAMPLERS;
+			break;
+		case 'c':
+			flags |= BGFX_DISCARD_COMPUTE;
+			break;
+		case 's':
+			flags |= BGFX_DISCARD_STATE;
+			break;
+		default:
+			luaL_error(L, "Invalid discard string %s", flags_string);
+		}
+	}
+	return flags;
+}
+
 static int
 lsubmit(lua_State *L) {
 	bgfx_view_id_t id = luaL_checkinteger(L, 1);
@@ -1134,6 +1170,17 @@ lsubmit(lua_State *L) {
 	int preserveState = lua_toboolean(L, 4);
 	bgfx_program_handle_t ph = { progid };
 	BGFX(submit)(id, ph, depth, preserveState);
+	return 0;
+}
+
+static int
+ldiscard(lua_State *L) {
+	if (lua_isnoneornil(L, 1)) {
+		BGFX(discard)(BGFX_DISCARD_ALL);
+	} else {
+		uint8_t flags = discard_flags(L, 1);
+		BGFX(discard)(flags);
+	}
 	return 0;
 }
 
@@ -1862,9 +1909,16 @@ create_mem_from_table(lua_State *L, int idx, int n, bgfx_vertex_layout_t *src_vd
 	// binary data
 	int t = lua_geti(L, idx, n);
 	if (t == LUA_TLIGHTUSERDATA || t == LUA_TUSERDATA) {
-		void * data = lua_touserdata(L, -1);
-		size_t sz;
+		const uint8_t * data = (const uint8_t*)lua_touserdata(L, -1);
+		size_t offset, sz;
 		if (lua_geti(L, idx, n+1) == LUA_TNUMBER) {
+			offset = lua_tointeger(L, -1);
+		} else {
+			luaL_error(L, "need offset for userdata");
+			return NULL;
+		}
+		
+		if (lua_geti(L, idx, n+2) == LUA_TNUMBER) {
 			sz = lua_tointeger(L, -1);
 		} else if (t == LUA_TLIGHTUSERDATA) {
 			luaL_error(L, "Missing size for lightuserdata");
@@ -1874,11 +1928,10 @@ create_mem_from_table(lua_State *L, int idx, int n, bgfx_vertex_layout_t *src_vd
 		}
 		lua_pop(L, 2);
 		if (src_vd) {
-			return convert_by_decl(data, sz, src_vd, desc_vd);
-		} else {
-			const bgfx_memory_t *mem = BGFX(make_ref)(data, sz);
-			return mem;
+			return convert_by_decl(data + offset, sz, src_vd, desc_vd);
 		}
+		
+		return BGFX(make_ref)(data + offset, sz);
 	}
 
 	if (t != LUA_TSTRING) {
@@ -1921,6 +1974,43 @@ get_stride(lua_State *L, const char *format) {
 	return stride;
 }
 
+static inline void
+copy_layout_data(lua_State*L, const char* layout, int tableidx, int startidx, size_t numvertices, uint8_t *addr){
+	for (size_t i=0;i<numvertices;i++) {
+		for (int j=0;layout[j];j++) {
+			if (lua_geti(L, tableidx, startidx) != LUA_TNUMBER) {
+				luaL_error(L, "vertex buffer data %d type error %s", tableidx, lua_typename(L, lua_type(L, -1)));
+			}
+			switch (layout[j]) {
+			case 'f':
+				*(float *)addr = lua_tonumber(L, -1);
+				addr += 4;
+				break;
+			case 'd': {
+				uint8_t * ptr = addr;
+				uint32_t data = (uint32_t)lua_tointeger(L, -1);
+				ptr[0] = data & 0xff;
+				ptr[1] = (data >> 8) & 0xff;
+				ptr[2] = (data >> 16) & 0xff;
+				ptr[3] = (data >> 24) & 0xff;
+				addr += 4;
+				break;
+			}
+			case 's':
+				*(int16_t *)addr = lua_tointeger(L, -1);
+				addr += 2;
+				break;
+			case 'b':
+				*(uint8_t *)addr = lua_tointeger(L, -1);
+				addr += 1;
+				break;
+			}
+			lua_pop(L, 1);
+			++startidx;
+		}
+	}
+}
+
 /*
 	the first one is layout
 	f : float
@@ -1953,46 +2043,11 @@ create_from_table_decl(lua_State *L, int idx, bgfx_vertex_layout_t *vd) {
 	int n = lua_rawlen(L, idx) - 1;
 	int stride = get_stride(L, layout);
 	int numv = n / sz;
-	if (numv * sz != n) {
+	if (n == 0 || numv * sz != n) {
 		luaL_error(L, "Invalid number of table %d", n);
 	}
 	const bgfx_memory_t *mem = BGFX(alloc)(numv * stride);
-	int i,j;
-	int tidx = 2;
-	uint8_t * addr = mem->data;
-	for (i=0;i<numv;i++) {
-		for (j=0;layout[j];j++) {
-			if (lua_geti(L, idx, tidx) != LUA_TNUMBER) {
-				luaL_error(L, "vertex buffer data %d type error %s", tidx, lua_typename(L, lua_type(L, -1)));
-			}
-			switch (layout[j]) {
-			case 'f':
-				*(float *)addr = lua_tonumber(L, -1);
-				addr += 4;
-				break;
-			case 'd': {
-				uint8_t * ptr = addr;
-				uint32_t data = (uint32_t)lua_tointeger(L, -1);
-				ptr[0] = data & 0xff;
-				ptr[1] = (data >> 8) & 0xff;
-				ptr[2] = (data >> 16) & 0xff;
-				ptr[3] = (data >> 24) & 0xff;
-				addr += 4;
-				break;
-			}
-			case 's':
-				*(int16_t *)addr = lua_tointeger(L, -1);
-				addr += 2;
-				break;
-			case 'b':
-				*(uint8_t *)addr = lua_tointeger(L, -1);
-				addr += 1;
-				break;
-			}
-			lua_pop(L, 1);
-			++tidx;
-		}
-	}
+	copy_layout_data(L, layout, idx, 2, numv, mem->data);
 	return mem;
 }
 
@@ -2060,6 +2115,50 @@ NORMALIZE(float v[3]) {
 	v[2] *= invLen;
 
 	return v;
+}
+
+static inline void
+copy_index_data(lua_State *L, const char* layout, int tableidx, int startidx, size_t num, uint8_t *addr){
+	const uint8_t elemsize = (uint8_t)(layout[1] - '0');
+	if (elemsize != 2 || elemsize != 4){
+		luaL_error(L, "copy index buffer failed, element size must 2 or 4", elemsize);
+	}
+	for (size_t ii = 0; ii < num; ++ii){
+		lua_geti(L, tableidx, ii+startidx);
+		if (elemsize == 2){
+			*(uint16_t*)addr = (uint16_t)lua_tointeger(L, -1);
+		} else if (elemsize == 4) {
+			*(uint32_t*)addr = (uint32_t)lua_tointeger(L, -1);
+		}
+		lua_pop(L, 1);
+		addr += elemsize;
+	}
+}
+
+static int 
+lcopy_data(lua_State *L){
+	luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+	uint8_t *addr = (uint8_t*)lua_touserdata(L, 1);
+	
+	luaL_checktype(L, 2, LUA_TTABLE);
+	const int type = lua_geti(L, 2, 1);
+	if (type != LUA_TSTRING){
+		return luaL_error(L, "first element of table must define vertex stride, "
+						"if one vertex include position and color, it like:'fffd', mean 3 float data and 32bit " "integer");
+	}
+	size_t layoutsize = 0;
+	const char* layout = lua_tolstring(L, -1, &layoutsize);
+	lua_pop(L, 1);
+
+	const int num = lua_rawlen(L, 2) - 1;
+	if (layout[0] == '!'){
+		copy_index_data(L, layout, 2, 2, num, addr);
+	}else{
+		const int numvertices = num / layoutsize;
+		copy_layout_data(L, layout, 2, 2, numvertices, addr);
+	}
+
+	return 0;
 }
 
 static void
@@ -3039,6 +3138,14 @@ get_texture_flags(lua_State *L, const char *format) {
 				luaL_error(L, "Invalid SAMPLE %c", format[i+1]);
 			}
 			continue;
+		case 'S': // sRGB/Gamma space
+			switch (format[i + 1]) {
+				case 'g': flags |= BGFX_TEXTURE_SRGB; break;// gamma
+				case 'l': break;// linear
+				default:
+					luaL_error(L, "Invalid colorspace flags %c", format[i + 1]);
+			}
+			continue;
 		default:
 			luaL_error(L, "Invalid texture flags %c",format[i]);
 		}
@@ -3159,9 +3266,33 @@ memory_write(lua_State *L) {
  */
 static int
 lmemoryTexture(lua_State *L) {
-	int size = luaL_checkinteger(L, 1);
-	void * data = lua_newuserdata(L, size);
-	memset(data, 0, size);
+	const int intype = lua_type(L, 1);
+	if (intype == LUA_TNUMBER){
+		int size = (int)lua_tointeger(L, 1);
+		void * data = lua_newuserdata(L, size);
+		memset(data, 0, size);
+	} else if (intype == LUA_TSTRING){
+		size_t size;
+		const char* origdata = lua_tolstring(L, 1, &size);
+
+		//lua data range are both in closed interval and start from 1
+		//but c data range is different and start point in close interval, but end point in open interval, and start from 0
+		//so, a data range with 10 bytes data, in lua we express as: 
+		// [1, 10], size: 10 - 1 + 1 = 10 bytes, 
+		// but in c we express as: 
+		// [0, 10), size: 10 - 0 = 10 bytes
+		const int startbytes = lua_isnoneornil(L, 2) ? 0 :lua_tointeger(L, 2) - 1;
+		const int endbytes = lua_isnoneornil(L, 3) ? -1 : lua_tointeger(L, 3) - 1;
+
+		if (endbytes > startbytes)
+			size = (endbytes - startbytes + 1);
+
+		void * data = lua_newuserdata(L, size);
+		memcpy(data, origdata + startbytes, size);
+	} else {
+		return luaL_error(L, "not support argument type:%d", intype);
+	}
+	
 	if (luaL_newmetatable(L, "BGFX_MEMORY")) {
 		lua_pushcfunction(L, memory_tostring);
 		lua_setfield(L, -2, "__tostring");
@@ -3477,6 +3608,9 @@ lcreateTexture2D(lua_State *L) {
 			break;
 		default:
 			return luaL_error(L, "Invalid texture data type %s", lua_typename(L, lua_type(L, idx)));
+		}
+		if (width <= 0 || height <= 0) {
+			return luaL_error(L, "Invalid texture size (width %d, height %d).", width, height);
 		}
 		handle = BGFX(create_texture_2d)(width, height, hasMips, layers, fmt, flags, mem);
 	}
@@ -4229,6 +4363,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "create_shader", lcreateShader },
 		{ "create_program", lcreateProgram },
 		{ "submit", lsubmit },
+		{ "discard", ldiscard },
 		{ "make_state", lmakeState },
 		{ "set_state", lsetState },
 		{ "vertex_layout", lnewVertexLayout },
@@ -4285,6 +4420,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "get_screenshot", lgetScreenshot },
 		{ "export_vertex_layout", lexportVertexLayout },
 		{ "vertex_layout_stride", lvertexLayoutStride },
+		{ "copy_data", lcopy_data},
 		{ "get_log", lgetLog },
 
 		{ NULL, NULL },
