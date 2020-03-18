@@ -1171,7 +1171,7 @@ lsubmit(lua_State *L) {
 	if (lua_isnoneornil(L, 4)) {
 		flags = BGFX_DISCARD_ALL;
 	} else {
-		flags = discard_flags(L, 1);
+		flags = discard_flags(L, 4);
 	}
 	bgfx_program_handle_t ph = { progid };
 	BGFX(submit)(id, ph, depth, flags);
