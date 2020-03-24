@@ -65,9 +65,10 @@ local function mainloop()
 	local lightMtx = math3d.mul(mtxShadow, mtxFloor)
 
 --	Floor.
+	local cached =  bgfx.set_transform(mtxFloor)
 	for pass =1, 2 do
 		local st = ctx.m_state[pass]
-		bgfx.set_transform(mtxFloor)
+		bgfx.set_transform_cached(cached)
 		for _,texture in ipairs(st.textures) do
 			bgfx.set_texture(texture.stage, texture.sampler, texture.texture, texture.flags)
 		end

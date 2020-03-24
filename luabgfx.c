@@ -2574,20 +2574,43 @@ lsetIndexBuffer(lua_State *L) {
 
 static int
 lsetTransform(lua_State *L) {
-	int t = lua_type(L, 1);
-	int num = luaL_optinteger(L, 2, 1);
-	if (t == LUA_TUSERDATA || t == LUA_TLIGHTUSERDATA) {
+	int n = lua_gettop(L);
+	if (n == 1) {
+		if (!lua_isuserdata(L, 1)) {
+			return luaL_error(L, "Need matrix userdata");
+		}
 		void *mat = lua_touserdata(L, 1);
-		int id = BGFX(set_transform)(mat, num);
+		int id = BGFX(set_transform)(mat, 1);
 		lua_pushinteger(L, id);
-	} else if (t == LUA_TNUMBER) {
-		int id = luaL_checkinteger(L, 1);
-		BGFX(set_transform_cached)(id, num);
 		return 1;
-	} else {
-		return luaL_error(L, "Need matrix or cache id");
+	} else if (n < 1) {
+		return luaL_error(L, "Need matrix");
 	}
+	// multiple mats
+	bgfx_transform_t trans;
+	uint32_t id = BGFX(alloc_transform)(&trans, n);
+	if (trans.num > n) {
+		return luaL_error(L, "Too many transform");
+	}
+	int i;
+	for (i=0;i<n;i++) {
+		if (!lua_isuserdata(L, i+1)) {
+			return luaL_error(L, "Need matrix at %d", i+1);
+		}
+		void *mat = lua_touserdata(L, i+1);
+		memcpy(trans.data + 16 * i, mat, 16 * sizeof(float));
+	}
+	BGFX(set_transform_cached)(id, n);
+	lua_pushinteger(L, id);
 	return 1;
+}
+
+static int
+lsetTransformCached(lua_State *L) {
+	int id = luaL_checkinteger(L, 1);
+	int num = luaL_optinteger(L, 2, 1);
+	BGFX(set_transform_cached)(id, num);
+	return 0;
 }
 
 static int
@@ -4380,6 +4403,7 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_index_buffer", lsetIndexBuffer },
 		{ "destroy", ldestroy },
 		{ "set_transform", lsetTransform },
+		{ "set_transform_cached", lsetTransformCached },
 		{ "dbg_text_clear", ldbgTextClear },
 		{ "dbg_text_print", ldbgTextPrint },
 		{ "dbg_text_image", ldbgTextImage },

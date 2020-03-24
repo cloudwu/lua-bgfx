@@ -212,7 +212,7 @@ function util.meshSubmit(mesh, id, prog)
 		local group = g[i]
 		bgfx.set_index_buffer(group.ib)
 		bgfx.set_vertex_buffer(group.vb)
-		bgfx.submit(id, prog, 0, i ~= n)
+		bgfx.submit(id, prog, 0, i ~= n and "" or "ivs")
 	end
 end
 
@@ -230,7 +230,7 @@ function util.meshSubmitState(mesh, state, mtx)
 		local group = g[i]
 		bgfx.set_index_buffer(group.ib)
 		bgfx.set_vertex_buffer(group.vb)
-		bgfx.submit(state.viewId, state.program, 0, i ~= n)
+		bgfx.submit(state.viewId, state.program, 0, i ~= n and "" or "ivs")
 	end
 end
 
