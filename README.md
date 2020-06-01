@@ -1,13 +1,13 @@
 Yet another bgfx lua binding library
 =============
 
-This is my style bgfx lua (5.3) binding library (work on process), and I rewrote parts of bgfx original examples in lua.
+This is my style bgfx lua (5.3/5.4) binding library, and I rewrote a few bgfx original examples in lua.
 
 The lua version examples are not efficent but just only for testing.
 
-To build the library, you should build bgfx static library first, or you can download my [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases) .
+To build the library, you should build bgfx static library first.
 
-I use [IUP](http://webserver2.tecgraf.puc-rio.br/iup/) for GUI framework, you can also download the [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) .
+I use [IUP](http://webserver2.tecgraf.puc-rio.br/iup/) for GUI framework, you can download the [win64 pre-compile version](https://github.com/cloudwu/lua-bgfx/releases/download/v0.1/iup.zip) .
 
 To test it, just put `lua.exe` , `math3d.dll` , `bgfx.dll` in the `bin` directory with the asserts (textures/shaders/meshes) from bgfx , and run :
 
@@ -28,7 +28,7 @@ bgfx 已有一个 lua api binding ，但是我不太满意，所以自己重新�
 编译
 =====
 
-编译这个库需要先编译好 bgfx 静态库，如果你只想测试 lua 部分，可以下载[预编译版本](https://github.com/cloudwu/lua-bgfx/releases) 。
+编译这个库需要先编译好 bgfx 静态库。
 
 运行
 =====
@@ -43,7 +43,7 @@ LICENSE
 The MIT License
 =====
 
-Copyright 2017-2019 云风 cloudwu@gmail.com
+Copyright 2017-2020 云风 cloudwu@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
