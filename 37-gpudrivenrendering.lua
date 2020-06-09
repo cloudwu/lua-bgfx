@@ -29,7 +29,6 @@ local dlg = iup.dialog {
 }
 
 local s_cubeVertices = {
-	"fff",
 	-0.5,  0.5,  0.5,
 	 0.5,  0.5,  0.5,
 	-0.5, -0.5,  0.5,
@@ -59,7 +58,7 @@ local s_cubeIndices = {
 local function renderOcclusionBufferPass()
 	-- Setup the occlusion pass projection
 	local projmat = ctx.m_occlusionProj
-	projmat.m = math3d.matrix { fov = 60, aspect = ctx.m_hiZwidth/ctx.m_hiZheight, n = 0.1, f = 500 }
+	projmat.m = math3d.projmat { fov = 60, aspect = ctx.m_hiZwidth/ctx.m_hiZheight, n = 0.1, f = 500 }
 	bgfx.set_view_transform(RENDER_PASS_HIZ_ID, ctx.m_mainView, projmat)
 
 	bgfx.set_view_frame_buffer(RENDER_PASS_HIZ_ID, ctx.m_hiZDepthBuffer)
@@ -250,7 +249,7 @@ function ctx.init(w,h)
 		prop.m_vertices = s_cubeVertices
 		prop.m_indices = s_cubeIndices
 
-		prop.m_vertexbufferHandle = bgfx.create_vertex_buffer(prop.m_vertices, ctx.vdecl)
+		prop.m_vertexbufferHandle = bgfx.create_vertex_buffer(bgfx.memory_buffer("fff", prop.m_vertices), ctx.vdecl)
 		prop.m_indexbufferHandle = bgfx.create_index_buffer(prop.m_indices)
 	end
 
@@ -391,7 +390,7 @@ function ctx.init(w,h)
 			}
 			-- initialise the buffer with the bounding boxes of all instances
 			local sizeOfBuffer = 2 * 4 * ctx.m_totalInstancesCount
-			local boundingBoxes = { "ffff" }
+			local boundingBoxes = {}
 			for i, prop in ipairs(ctx.m_props) do
 				local numInstances = prop.m_noofInstances
 
@@ -410,7 +409,7 @@ function ctx.init(w,h)
 				end
 			end
 
-			ctx.m_instanceBoundingBoxes = bgfx.create_dynamic_vertex_buffer( boundingBoxes , computeVertexDecl, "r")	-- BGFX_BUFFER_COMPUTE_READ
+			ctx.m_instanceBoundingBoxes = bgfx.create_dynamic_vertex_buffer( bgfx.memory_buffer("ffff", boundingBoxes) , computeVertexDecl, "r")	-- BGFX_BUFFER_COMPUTE_READ
 		end
 
 		-- pre and post occlusion culling instance data buffers
@@ -425,7 +424,7 @@ function ctx.init(w,h)
 			-- Currently we only store a world matrix (16 floats)
 
 			--	const int sizeOfBuffer = 16 * m_totalInstancesCount;
-			local instanceData = { "ffffffffffffffff" }
+			local instanceData = {}
 
 			for ii, prop in ipairs(ctx.m_props) do
 				local numInstances = prop.m_noofInstances
@@ -440,7 +439,7 @@ function ctx.init(w,h)
 			end
 
 			-- pre occlusion buffer
-			ctx.m_instanceBuffer = bgfx.create_vertex_buffer(instanceData, instanceBufferVertexDecl, "r")
+			ctx.m_instanceBuffer = bgfx.create_vertex_buffer(bgfx.memory_buffer("ffffffffffffffff", instanceData), instanceBufferVertexDecl, "r")
 			-- post occlusion buffer
 			ctx.m_culledInstanceBuffer = bgfx.create_dynamic_vertex_buffer(4 * ctx.m_totalInstancesCount, instanceBufferVertexDecl, "w")
 		end
@@ -481,7 +480,7 @@ function ctx.init(w,h)
 	end
 
 	-- CPU data to fill the master buffers
-	ctx.m_allPropVerticesDataCPU = { "fff" }	--new PosVertex[totalNoofVertices];
+	ctx.m_allPropVerticesDataCPU = {}	--new PosVertex[totalNoofVertices];
 	ctx.m_allPropIndicesDataCPU = {} --new uint16_t[totalNoofIndices];
 	ctx.m_indirectBufferDataCPU = {} --new uint32_t[m_noofProps * 3];
 
@@ -494,7 +493,7 @@ function ctx.init(w,h)
 
 	for i = 1, ctx.m_noofProps do
 		local prop = ctx.m_props[i]
-		for i = 2, #prop.m_vertices do
+		for i = 1, #prop.m_vertices do
 			table.insert(ctx.m_allPropVerticesDataCPU, prop.m_vertices[i])
 		end
 		for _, v in ipairs(prop.m_indices) do
@@ -510,7 +509,7 @@ function ctx.init(w,h)
 	end
 
 	-- Create master vertex buffer
-	ctx.m_allPropsVertexbufferHandle = bgfx.create_vertex_buffer(ctx.m_allPropVerticesDataCPU, ctx.vdecl)
+	ctx.m_allPropsVertexbufferHandle = bgfx.create_vertex_buffer(bgfx.memory_buffer( "fff", ctx.m_allPropVerticesDataCPU), ctx.vdecl)
 	-- Create master index buffer.
 	ctx.m_allPropsIndexbufferHandle = bgfx.create_index_buffer(ctx.m_allPropIndicesDataCPU)
 	-- Create buffer with const drawcall data which will be copied to the indirect buffer later.

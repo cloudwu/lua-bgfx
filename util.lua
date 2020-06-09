@@ -113,8 +113,8 @@ end
 do
 	local mesh_decode = {}
 	local vb_header = "<" .. string.rep("f", 4+6+16)
-	local vb_data = { "!", "", nil, nil }
-	local ib_data = { "", nil, nil }
+--	local vb_data = { "!", "", nil, nil }
+--	local ib_data = { "", nil, nil }
 
 	local function read_mesh_header(group, data, offset)
 		local tmp = { string.unpack(vb_header, data, offset) }
@@ -129,31 +129,23 @@ do
 		local stride, numVertices
 		mesh.vdecl, stride, offset = bgfx.vertex_layout(data, offset)
 		numVertices, offset = string.unpack("<I2", data, offset)
-		vb_data[2] = data
-		vb_data[3] = offset
-		offset = offset + stride * numVertices
-		vb_data[4] =  offset - 1
+		local size = stride * numVertices
+		local vb_data = bgfx.memory_buffer(data, offset, size)
 		group.vb = bgfx.create_vertex_buffer(vb_data, mesh.vdecl)
-		return offset
+		return offset + size
 	end
 
 	mesh_decode["IB \0"] = function(mesh, group, data, offset)
 		local numIndices
 		numIndices, offset = string.unpack("<I4", data, offset)
-		ib_data[1] = data
-		ib_data[2] = offset
-		offset = offset + numIndices * 2
-		ib_data[3] = offset - 1
+		local size = numIndices * 2
+		local ib_data = bgfx.memory_buffer(data, offset, size)
 		group.ib = bgfx.create_index_buffer(ib_data)
-		return offset
+		return offset + size
 	end
 
 	mesh_decode["IBC\0"] = function(mesh, group, data, offset)
-		local numIndices, size
-		numIndices, size, offset = string.unpack("<I4I4", data, offset)
-		local endp = offset + size
-		group.ib = bgfx.create_index_buffer_compress(data, offset, endp -1)
-		return endp
+		error "Unsupport Compressed IB"
 	end
 
 	mesh_decode["PRI\0"] = function(mesh, group, data, offset)

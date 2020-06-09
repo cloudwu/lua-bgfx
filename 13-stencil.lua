@@ -674,8 +674,7 @@ function ctx.init()
 
 	local encodeNormalRgba8 = bgfxu.encodeNormalRgba8
 
-	local s_cubeVertices = {
-	 "fffdff",
+	local s_cubeVertices = bgfx.memory_buffer("fffdff", {
 	 -1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 1.0, 1.0 ,
 	  1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0.0, 1.0 ,
 	 -1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 1.0, 0.0 ,
@@ -700,7 +699,7 @@ function ctx.init()
 	 -1.0,  1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0.0, 1.0 ,
 	 -1.0, -1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 1.0, 0.0 ,
 	 -1.0, -1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0.0, 0.0 ,
-	}
+	})
 
 	local s_cubeIndices = {
 	0,  1,  2,
@@ -722,26 +721,24 @@ function ctx.init()
 	ctx.m_cubeMesh = mesh(s_cubeVertices,s_cubeIndices)
 
 	local s_texcoord = 5.0
-	local s_hplaneVertices = {
-	"fffdff",
+	local s_hplaneVertices = bgfx.memory_buffer("fffdff", {
 	 -1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0), s_texcoord, s_texcoord ,
 	  1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0), s_texcoord, 0.0       ,
 	 -1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0), 0.0,       s_texcoord ,
 	  1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0), 0.0,       0.0       ,
-	}
+	})
 
 	local s_planeIndices = {
 	0, 1, 2,
 	1, 3, 2,
 	}
 
-	local s_vplaneVertices = {
-	 "fffdff",
+	local s_vplaneVertices = bgfx.memory_buffer("fffdff", {
 	 -1.0,  1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 1.0, 1.0 ,
 	  1.0,  1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 1.0, 0.0 ,
 	 -1.0, -1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 0.0, 1.0 ,
 	  1.0, -1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 0.0, 0.0 ,
-	}
+	})
 
 	ctx.m_hplaneMesh = mesh(s_hplaneVertices, s_planeIndices)
 	ctx.m_vplaneMesh = mesh(s_vplaneVertices, s_planeIndices)

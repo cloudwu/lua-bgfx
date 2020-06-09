@@ -132,14 +132,13 @@ function ctx.init()
 
 	local encodeNormalRgba8 = bgfxu.encodeNormalRgba8
 
-	ctx.m_vbh = bgfx.create_vertex_buffer(
-		{ "fffd",
+	ctx.m_vbh = bgfx.create_vertex_buffer( bgfx.memory_buffer( "fffd",
+		{
 		 -1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0),
 		  1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0),
 		 -1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0),
 		  1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0),
-		}
-		, ctx.vdecl)
+		} ) , ctx.vdecl)
 
 	ctx.m_ibh = bgfx.create_index_buffer {
 		0, 1, 2,

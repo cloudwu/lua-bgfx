@@ -91,7 +91,7 @@ function ctx.init()
 		MSAA = true,
 	}
 
-	local s_cubeIndices =  {
+	local s_cubeIndices = bgfx.memory_buffer( "s", {
 	 0,  2,  1,
 	 1,  2,  3,
 	 4,  5,  6,
@@ -106,38 +106,40 @@ function ctx.init()
 	17, 18, 19,
 	20, 21, 22,
 	21, 23, 22,
-	}
+	} )
 
 	local encodeNormalRgba8 = bgfxu.encodeNormalRgba8
 
-	ctx.vb = bgfx.create_vertex_buffer({
-			"fffddss",
-			-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0,      0 ,
-			 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff,      0 ,
-			-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0, 0x7fff ,
-			 1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff, 0x7fff ,
-			-1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0,      0,      0 ,
-			 1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0, 0x7fff,      0 ,
-			-1.0, -1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0,      0, 0x7fff ,
-			 1.0, -1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0, 0x7fff, 0x7fff ,
-			-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0,      0,      0 ,
-			 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0, 0x7fff,      0 ,
-			-1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0,      0, 0x7fff ,
-			 1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0, 0x7fff, 0x7fff ,
-			-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0,      0,      0 ,
-			 1.0, -1.0,  1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0, 0x7fff,      0 ,
-			-1.0, -1.0, -1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0,      0, 0x7fff ,
-			 1.0, -1.0, -1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0, 0x7fff, 0x7fff ,
-			 1.0, -1.0,  1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0,      0,      0 ,
-			 1.0,  1.0,  1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0, 0x7fff,      0 ,
-			 1.0, -1.0, -1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0,      0, 0x7fff ,
-			 1.0,  1.0, -1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff ,
-			-1.0, -1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0,      0 ,
-			-1.0,  1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff,      0 ,
-			-1.0, -1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0, 0x7fff ,
-			-1.0,  1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff ,
-		},
-		ctx.vdecl , "t" , s_cubeIndices)
+	local s_cubeVertices = bgfx.memory_buffer( "fffddss" , {
+		-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0,      0 ,
+		 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff,      0 ,
+		-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0, 0x7fff ,
+		 1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff, 0x7fff ,
+		-1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0,      0,      0 ,
+		 1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0, 0x7fff,      0 ,
+		-1.0, -1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0,      0, 0x7fff ,
+		 1.0, -1.0, -1.0, encodeNormalRgba8( 0.0,  0.0, -1.0), 0, 0x7fff, 0x7fff ,
+		-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0,      0,      0 ,
+		 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0, 0x7fff,      0 ,
+		-1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0,      0, 0x7fff ,
+		 1.0,  1.0, -1.0, encodeNormalRgba8( 0.0,  1.0,  0.0), 0, 0x7fff, 0x7fff ,
+		-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0,      0,      0 ,
+		 1.0, -1.0,  1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0, 0x7fff,      0 ,
+		-1.0, -1.0, -1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0,      0, 0x7fff ,
+		 1.0, -1.0, -1.0, encodeNormalRgba8( 0.0, -1.0,  0.0), 0, 0x7fff, 0x7fff ,
+		 1.0, -1.0,  1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0,      0,      0 ,
+		 1.0,  1.0,  1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0, 0x7fff,      0 ,
+		 1.0, -1.0, -1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0,      0, 0x7fff ,
+		 1.0,  1.0, -1.0, encodeNormalRgba8( 1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff ,
+		-1.0, -1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0,      0 ,
+		-1.0,  1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff,      0 ,
+		-1.0, -1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0, 0x7fff ,
+		-1.0,  1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff ,
+	} )
+
+	bgfx.calc_tangent(s_cubeVertices, ctx.vdecl, s_cubeIndices)
+
+	ctx.vb = bgfx.create_vertex_buffer(s_cubeVertices, ctx.vdecl)
 	ctx.ib = bgfx.create_index_buffer(s_cubeIndices)
 	ctx.s_texColor  = bgfx.create_uniform("s_texColor", "s")
 	ctx.s_texNormal = bgfx.create_uniform("s_texNormal", "s")

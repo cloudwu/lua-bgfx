@@ -2061,20 +2061,18 @@ function ctx.init()
 
 	local s_texcoord = 5.0
 
-	local s_hplaneVertices = {
-		"fffdff",
+	local s_hplaneVertices = bgfx.memory_buffer ("fffdff", {
 		-1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0), s_texcoord, s_texcoord,
 		 1.0, 0.0,  1.0, encodeNormalRgba8(0.0, 1.0, 0.0), s_texcoord, 0.0      ,
 		-1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0), 0.0,       s_texcoord,
 		 1.0, 0.0, -1.0, encodeNormalRgba8(0.0, 1.0, 0.0), 0.0,       0.0      ,
-	}
-	local s_vplaneVertices = {
-		"fffdff",
+	})
+	local s_vplaneVertices = bgfx.memory_buffer ("fffdff", {
 	 -1.0,  1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 1.0, 1.0 ,
 	  1.0,  1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 1.0, 0.0 ,
 	 -1.0, -1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 0.0, 1.0 ,
 	  1.0, -1.0, 0.0, encodeNormalRgba8(0.0, 0.0, -1.0), 0.0, 0.0 ,
-	}
+	})
 	local s_planeIndices = {
 		0, 1, 2,
 		1, 3, 2,

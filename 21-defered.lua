@@ -6,6 +6,8 @@ local bgfxu = require "bgfx.util"
 local util = require "util"
 local math3d = require "math3d"
 
+local GC = function() collectgarbage() collectgarbage() end
+
 local ctx = {
 	canvas = iup.canvas {},
 }
@@ -327,6 +329,8 @@ local function mainloop()
 		end
 	end
 
+	GC()
+
 	bgfx.frame()
 end
 
@@ -366,8 +370,7 @@ function ctx.init()
 
 	local encodeNormalRgba8 = bgfxu.encodeNormalRgba8
 
-	local s_cubeVertices = {
-	"fffddss",
+	local s_cubeVertices = bgfx.memory_buffer("fffddss", {
 	-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0,      0,
 	 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff,      0,
 	-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0, 0x7fff,
@@ -392,8 +395,8 @@ function ctx.init()
 	-1.0,  1.0,  1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff,      0,
 	-1.0, -1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0,      0, 0x7fff,
 	-1.0,  1.0, -1.0, encodeNormalRgba8(-1.0,  0.0,  0.0), 0, 0x7fff, 0x7fff,
-	}
-	local s_cubeIndices = {
+	})
+	local s_cubeIndices = bgfx.memory_buffer("s", {
 	 0,  2,  1,
 	 1,  2,  3,
 	 4,  5,  6,
@@ -408,10 +411,12 @@ function ctx.init()
 	17, 18, 19,
 	20, 21, 22,
 	21, 23, 22,
-	}
+	})
+
+	bgfx.calc_tangent(s_cubeVertices, ctx.PosNormalTangentTexcoordVertex, s_cubeIndices)
 
 	-- Create static vertex buffer.
-	ctx.m_vbh = bgfx.create_vertex_buffer(s_cubeVertices, ctx.PosNormalTangentTexcoordVertex, "t", s_cubeIndices)
+	ctx.m_vbh = bgfx.create_vertex_buffer(s_cubeVertices, ctx.PosNormalTangentTexcoordVertex)
 	-- Create static index buffer.
 	ctx.m_ibh = bgfx.create_index_buffer(s_cubeIndices)
 
@@ -495,7 +500,7 @@ function ctx.resize(w,h)
 	]]
 	ctx.m_gbufferTex[1] = bgfx.create_texture2d(w, h, false, 1, "BGRA8" , samplerFlags)
 	ctx.m_gbufferTex[2] = bgfx.create_texture2d(w, h, false, 1, "BGRA8" , samplerFlags)
-	ctx.m_gbufferTex[3] = bgfx.create_texture2d(w, h, false, 1, "D24S8"   , samplerFlags)
+	ctx.m_gbufferTex[3] = bgfx.create_texture2d(w, h, false, 1, "D24S8" , samplerFlags)
 	ctx.m_gbuffer = bgfx.create_frame_buffer(ctx.m_gbufferTex, true)
 
 	bgfx.destroy(ctx.m_lightBuffer)
@@ -517,4 +522,5 @@ end
 util.init(ctx)
 dlg:showxy(iup.CENTER,iup.CENTER)
 dlg.usersize = nil
+GC()
 util.run(mainloop)

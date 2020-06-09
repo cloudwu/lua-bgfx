@@ -9,7 +9,6 @@ local kDimWidth  = 11
 local kDimHeight = 11
 
 local s_cubeVertices = {
-	"fffd",
 	-1.0,  1.0,  1.0, 0xff000000 ,
 	 1.0,  1.0,  1.0, 0xff0000ff ,
 	-1.0, -1.0,  1.0, 0xff00ff00 ,
@@ -30,7 +29,7 @@ local dlg = iup.dialog {
 	size = "HALFxHALF",
 }
 
-local tmp = { "fffd" }
+local tmp = {}
 local time = 0
 local function mainloop()
 	math3d.reset()
@@ -40,7 +39,7 @@ local function mainloop()
 	do
 		local angle = math.random()
 		local mtx = math3d.matrix { r = { 0,0, angle } }
-		for i = 2, 33, 4 do
+		for i = 1, 32, 4 do
 			local vec = math3d.vector(s_cubeVertices[i], s_cubeVertices[i+1], s_cubeVertices[i+2])
 			vec = math3d.totable(math3d.transform( mtx, vec, 1))
 			tmp[i], tmp[i+1], tmp[i+2] = vec[1],vec[2],vec[3]
@@ -52,7 +51,7 @@ local function mainloop()
 		end
 
 		local idx = math.random(1, kDimWidth*kDimHeight)
-		bgfx.update(ctx.m_vbh[idx], 0, tmp)
+		bgfx.update(ctx.m_vbh[idx], 0, bgfx.memory_buffer("fffd", tmp))
 	end
 
 	-- Submit 11x11 cubes.
@@ -88,7 +87,7 @@ function ctx.init()
 	for yy = 0 , kDimHeight do
 		for xx = 0, kDimWidth do
 			ctx.m_vbh[yy*kDimWidth+xx+1] = bgfx.create_dynamic_vertex_buffer(
-						s_cubeVertices, ctx.vdecl)
+						bgfx.memory_buffer("fffd", s_cubeVertices), ctx.vdecl)
 		end
 	end
 

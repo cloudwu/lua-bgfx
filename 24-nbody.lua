@@ -277,13 +277,12 @@ function ctx.init()
 	}
 
 	-- Create static vertex buffer.
-	ctx.m_vbh = bgfx.create_vertex_buffer( {
-		"ff",
+	ctx.m_vbh = bgfx.create_vertex_buffer(bgfx.memory_buffer("ff", {
 		 1.0,  1.0,
 		-1.0,  1.0,
 		-1.0, -1.0,
 		 1.0, -1.0,
-	}, quadVertexDecl)
+	}) , quadVertexDecl)
 
 	-- Create static index buffer.
 	ctx.m_ibh = bgfx.create_index_buffer { 0, 1, 2, 2, 3, 0, }

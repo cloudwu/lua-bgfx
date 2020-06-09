@@ -214,8 +214,7 @@ function ctx.init()
 	}
 	ctx.tvb = bgfx.transient_buffer "fffdff"
 
-	ctx.vb = bgfx.create_vertex_buffer({
-			"fffd",
+	ctx.vb = bgfx.create_vertex_buffer(bgfx.memory_buffer("fffd", {
 			-1.0,  1.0,  1.0, 0xff000000,
 			 1.0,  1.0,  1.0, 0xff0000ff,
 			-1.0, -1.0,  1.0, 0xff00ff00,
@@ -224,8 +223,7 @@ function ctx.init()
 			 1.0,  1.0, -1.0, 0xffff00ff,
 			-1.0, -1.0, -1.0, 0xffffff00,
 			 1.0, -1.0, -1.0, 0xffffffff,
-		},
-		ctx.PosColorVertex)
+		}), ctx.PosColorVertex)
 	ctx.ib = bgfx.create_index_buffer{
 		0, 1, 2, -- 0
 		1, 3, 2,
