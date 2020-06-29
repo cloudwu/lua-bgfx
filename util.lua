@@ -260,7 +260,7 @@ function util.init(args)
 			backBufferDS = args.backBufferDS,
 		}
 		util.caps = bgfx.get_caps()
-		math3d.homogeneous_depth(util.caps.homogeneousDepth)
+		math3d.set_homogeneous_depth(util.caps.homogeneousDepth)
 		init_shader_path(util.caps)
 		init_flag = true
 		bgfx.set_debug "T"
