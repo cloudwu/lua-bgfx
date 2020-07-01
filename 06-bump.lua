@@ -91,7 +91,7 @@ function ctx.init()
 		MSAA = true,
 	}
 
-	local s_cubeIndices = bgfx.memory_buffer( "s", {
+	local s_cubeIndices = bgfx.memory_buffer( "w", {
 	 0,  2,  1,
 	 1,  2,  3,
 	 4,  5,  6,
@@ -110,7 +110,7 @@ function ctx.init()
 
 	local encodeNormalRgba8 = bgfxu.encodeNormalRgba8
 
-	local s_cubeVertices = bgfx.memory_buffer( "fffddss" , {
+	local s_cubeVertices = bgfx.memory_buffer( "fffddww" , {
 		-1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0,      0 ,
 		 1.0,  1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0, 0x7fff,      0 ,
 		-1.0, -1.0,  1.0, encodeNormalRgba8( 0.0,  0.0,  1.0), 0,      0, 0x7fff ,

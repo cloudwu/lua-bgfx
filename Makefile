@@ -3,7 +3,7 @@ BGFXSRC = ../bgfx
 BXSRC = ../bx
 BIMGSRC = ../bimg
 LUAINC = -I/usr/local/include
-LUALIB = -L/usr/local/bin -llua53
+LUALIB = -L/usr/local/bin -llua54
 
 CC= gcc
 CXX = g++

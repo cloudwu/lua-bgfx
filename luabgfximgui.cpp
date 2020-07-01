@@ -700,7 +700,7 @@ create_new_editbuf(lua_State *L) {
 	} else {
 		++sz;
 	}
-	struct editbuf *ebuf = (struct editbuf *)lua_newuserdata(L, sizeof(*ebuf));
+	struct editbuf *ebuf = (struct editbuf *)lua_newuserdatauv(L, sizeof(*ebuf), 0);
 	ebuf->buf = (char *)malloc(sz);
 	if (ebuf->buf == NULL)
 		luaL_error(L, "Edit buffer oom %u", (unsigned)sz);
