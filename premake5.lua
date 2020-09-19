@@ -51,7 +51,7 @@ project "bgfx"
         "./luabgfx.c",
         "./luabgfxutil.c",
         "./luabgfximgui.cpp",
-        -- "./bgfx_alloc.cpp"
+        "./bgfx_alloc.cpp"
         }
     libdirs{BGFXLIBDIR}
     links{"lua54"}
