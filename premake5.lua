@@ -6,7 +6,7 @@ local BGFXINC = {
     BGFXDIR.."include",
     BGFXDIR.."3rdparty",
     BGFXDIR.."examples/common",
-    BXDIR.."compat/msvc",
+    BXDIR.."include/compat/msvc",
     BXDIR.."include",
     }
 
@@ -17,6 +17,7 @@ workspace "lua-bgfx"
     flags{"NoPCH","RelativeLinks"}
     location "./build"
     architecture "x64"
+    cppdialect "c++latest"
 
     filter "configurations:Debug"
         defines { "DEBUG" }
