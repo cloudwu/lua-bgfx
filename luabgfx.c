@@ -1735,7 +1735,7 @@ parse_write(lua_State *L, uint64_t state) {
 	write[idx++] = 0;
 	if (idx > 1) {
 		lua_pushstring(L, write);
-		lua_setfield(L, -2, "WRITE");
+		lua_setfield(L, -2, "WRITE_MASK");
 	}
 }
 
@@ -2316,11 +2316,16 @@ get_stride(lua_State *L, const char *format) {
 }
 
 static inline void
-copy_layout_data(lua_State*L, const char* layout, int tableidx, int startidx, uint8_t *addr){
+copy_layout_data(lua_State*L, const char* layout, int tableidx, int startidx, int num, uint8_t *addr){
 	int i;
-	int type = lua_geti(L, tableidx, startidx);
-	while (type != LUA_TNIL) {
+	int len = lua_rawlen(L, tableidx);
+	if ((startidx - 1 + num) > len){
+		luaL_error(L, "invalid range:%d, %d, table len:%d", startidx, num, len);
+	}
+	int endidx = startidx-1 + num;
+	while(startidx <= endidx){
 		for (i=0;layout[i];i++) {
+			int type = lua_geti(L, tableidx, startidx++);
 			if (type != LUA_TNUMBER) {
 				luaL_error(L, "buffer data %d type error %s", tableidx, lua_typename(L, type));
 			}
@@ -2343,11 +2348,8 @@ copy_layout_data(lua_State*L, const char* layout, int tableidx, int startidx, ui
 				break;
 			}
 			lua_pop(L, 1);
-			++startidx;
-			type = lua_geti(L, tableidx, startidx);
 		}
 	}
-	lua_pop(L, 1);
 }
 
 #include <math.h>
@@ -2573,10 +2575,10 @@ lmemoryBuffer(lua_State *L) {
 		// type 1
 		int vertexidx = luaL_optinteger(L, 3, 1);
 		int startidx = (vertexidx-1) * sz + 1;
-		int n = lua_isnoneornil(L, 4) ? lua_rawlen(L, 2) / sz : (int)lua_tointeger(L, 4);
+		int numvertex = lua_isnoneornil(L, 4) ? lua_rawlen(L, 2) / sz : (int)lua_tointeger(L, 4);
 		int stride = get_stride(L, str);
-		void *data = newMemory(L, NULL, n*stride);
-		copy_layout_data(L, str, 2, startidx, data);
+		void *data = newMemory(L, NULL, numvertex*stride);
+		copy_layout_data(L, str, 2, startidx, numvertex*sz, data);
 		return 1;
 	}
 	// type 2
@@ -2755,11 +2757,11 @@ getIndexBuffer(lua_State *L, int idx, int index32) {
 		int n = lua_rawlen(L, 1);
 		if (index32) {
 			void *data = newMemory(L, NULL, n*sizeof(uint32_t));
-			copy_layout_data(L, "d", 1, 1, data);
+			copy_layout_data(L, "d", 1, 1, n, data);
 		}
 		else {
 			void *data = newMemory(L, NULL, n*sizeof(uint16_t));
-			copy_layout_data(L, "w", 1, 1, data);
+			copy_layout_data(L, "w", 1, 1, n, data);
 		}
 		return bgfxMemory(L, -1);
 	} else {
@@ -3037,7 +3039,9 @@ lallocTB(lua_State *L) {
 	v->cap_v = max_v;
 	v->cap_i = max_i;
 
-	return 0;
+	lua_pushlightuserdata(L, v->tvb.data);
+	lua_pushlightuserdata(L, v->tib.data);
+	return 2;
 }
 
 static int
@@ -3548,7 +3552,7 @@ get_texture_flags(lua_State *L, const char *format) {
 				luaL_error(L, "Invalid SAMPLE %c", format[i+1]);
 			}
 			continue;
-		case 'S': // sRGB/Gamma space
+		case 'S': // sRGB/Linear space
 			switch (format[i + 1]) {
 				case 'g': flags |= BGFX_TEXTURE_SRGB; break;// gamma
 				case 'l': break;// linear
@@ -4632,6 +4636,16 @@ lgetLog(lua_State *L) {
 	return 1;
 }
 
+static int
+linitEncoder(lua_State *L) {
+	luaL_Reg l[] = {
+		{ NULL, NULL },
+	};
+	lua_pushvalue(L, lua_upvalueindex(1));
+	luaL_setfuncs(L, l, 0);
+	return 0;
+}
+
 LUAMOD_API int
 luaopen_bgfx(lua_State *L) {
 	luaL_checkversion(L);
@@ -4664,11 +4678,22 @@ luaopen_bgfx(lua_State *L) {
 	luaL_Reg l[] = {
 		{ "set_platform_data", lsetPlatformData },
 		{ "init", linit },
+		{ "shutdown", lshutdown },
+
+		{ "get_log", lgetLog },
+		{ "get_screenshot", lgetScreenshot },
+		{ "request_screenshot", lrequestScreenshot },
+
 		{ "get_caps", lgetCaps },
 		{ "get_stats", lgetStats },
 		{ "get_memory", lgetMemory },
+
 		{ "reset", lreset },
-		{ "shutdown", lshutdown },
+		{ "frame", lframe },
+		{ "set_debug", lsetDebug },
+		{ "set_name", lsetName },
+
+		{ "set_palette_color", lsetPaletteColor },
 		{ "set_view_clear", lsetViewClear },
 		{ "set_view_clear_mrt", lsetViewClearMRT },
 		{ "set_view_rect", lsetViewRect },
@@ -4676,79 +4701,89 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_view_order", lsetViewOrder },
 		{ "set_view_name", lsetViewName },
 		{ "set_view_frame_buffer", lsetViewFrameBuffer },
-		{ "touch", ltouch },
-		{ "set_debug", lsetDebug },
-		{ "frame", lframe },
-		{ "create_shader", lcreateShader },
-		{ "create_program", lcreateProgram },
-		{ "submit", lsubmit },
-		{ "discard", ldiscard },
+
 		{ "make_state", lmakeState },
-		{ "set_state", lsetState },
 		{ "parse_state", lparseState },
+		{ "make_stencil", lmakeStencil },
+
 		{ "vertex_layout", lnewVertexLayout },
 		{ "vertex_convert", lvertexConvert },
+		{ "export_vertex_layout", lexportVertexLayout },
+		{ "vertex_layout_stride", lvertexLayoutStride },
+
 		{ "memory_buffer", lmemoryBuffer},
 		{ "calc_tangent", lcalcTangent },
+
+		{ "create_shader", lcreateShader },
+		{ "create_program", lcreateProgram },
 		{ "create_vertex_buffer", lcreateVertexBuffer },
 		{ "create_dynamic_vertex_buffer", lcreateDynamicVertexBuffer },
 		{ "create_index_buffer", lcreateIndexBuffer },
 		{ "create_dynamic_index_buffer", lcreateDynamicIndexBuffer },
-		{ "set_vertex_buffer", lsetVertexBuffer },
-		{ "set_index_buffer", lsetIndexBuffer },
+		{ "create_uniform", lcreateUniform },
+		{ "create_texture2d", lcreateTexture2D },
+		{ "create_frame_buffer", lcreateFrameBuffer },
+		{ "create_indirect_buffer", lcreateIndirectBuffer },
+		{ "create_occlusion_query", lcreateOcclusionQuery },
+		{ "create_texture", lcreateTexture },	// create texture from data string (DDS, KTX or PVR texture data)
+
 		{ "destroy", ldestroy },
-		{ "set_transform", lsetTransform },
-		{ "set_transform_cached", lsetTransformCached },
-		{ "set_multi_transforms", lsetMultiTransforms},
+		{ "get_shader_uniforms", lgetShaderUniforms },
+		{ "get_uniform_info", lgetUniformInfo },
+		{ "set_view_mode", lsetViewMode },
+		{ "memory_texture", lmemoryTexture },
+
 		{ "dbg_text_clear", ldbgTextClear },
 		{ "dbg_text_print", ldbgTextPrint },
 		{ "dbg_text_image", ldbgTextImage },
+
 		{ "transient_buffer", lnewTransientBuffer },
-		{ "create_uniform", lcreateUniform },
-		{ "get_uniform_info", lgetUniformInfo },
+		{ "instance_buffer", lnewInstanceBuffer },
+		{ "instance_buffer_metatable", lgetInstanceBufferMetatable },
+
+		{ "is_texture_valid", lisTextureValid },
+		{ "get_texture", lgetTexture },
+		{ "get_result", lgetResult },
+		{ "read_texture", lreadTexture },
+		{ "update", lupdate },
+		{ "update_texture2d", lupdateTexture2D },
+	
+		// encoder apis
+		{ "touch", ltouch },
+		{ "submit", lsubmit },
+		{ "discard", ldiscard },
+		{ "set_state", lsetState },
+		{ "set_vertex_buffer", lsetVertexBuffer },
+		{ "set_index_buffer", lsetIndexBuffer },
+		{ "set_transform", lsetTransform },
+		{ "set_transform_cached", lsetTransformCached },
+		{ "set_multi_transforms", lsetMultiTransforms},
 		{ "set_uniform", lsetUniform },
 		{ "set_uniform_matrix", lsetUniformMatrix },	// for adapter
 		{ "set_uniform_vector", lsetUniformVector },	// for adapter
-		{ "instance_buffer", lnewInstanceBuffer },
-		{ "instance_buffer_metatable", lgetInstanceBufferMetatable },
-		{ "memory_texture", lmemoryTexture },
-		{ "create_texture", lcreateTexture },	// create texture from data string (DDS, KTX or PVR texture data)
-		{ "create_texture2d", lcreateTexture2D },
-		{ "update_texture2d", lupdateTexture2D },
-		{ "is_texture_valid", lisTextureValid },
 		{ "set_texture", lsetTexture },
-		{ "set_name", lsetName },
-		{ "create_frame_buffer", lcreateFrameBuffer },
-		{ "get_texture", lgetTexture },
-		{ "read_texture", lreadTexture },
 		{ "blit", lblit },
-		{ "make_stencil", lmakeStencil },
 		{ "set_stencil", lsetStencil },
-		{ "set_palette_color", lsetPaletteColor },
 		{ "set_scissor", lsetScissor },
-		{ "create_occlusion_query", lcreateOcclusionQuery },
 		{ "set_condition", lsetCondition },
 		{ "submit_occlusion_query", lsubmitOcclusionQuery },
-		{ "get_result", lgetResult },
-		{ "create_indirect_buffer", lcreateIndirectBuffer },
 		{ "set_buffer", lsetBuffer },
 		{ "dispatch", ldispatch },
 		{ "dispatch_indirect", ldispatchIndirect },
 		{ "set_instance_data_buffer", lsetInstanceDataBuffer },
 		{ "set_instance_count", lsetInstanceCount },
 		{ "submit_indirect", lsubmitIndirect },
-		{ "update", lupdate },
-		{ "get_shader_uniforms", lgetShaderUniforms },
-		{ "set_view_mode", lsetViewMode },
 		{ "set_image", lsetImage },
-		{ "request_screenshot", lrequestScreenshot },
-		{ "get_screenshot", lgetScreenshot },
-		{ "export_vertex_layout", lexportVertexLayout },
-		{ "vertex_layout_stride", lvertexLayoutStride },
-		{ "get_log", lgetLog },
+
+//		{ "encoder_begin", lbeginEncoder },
+//		{ "encoder_end", lendEncoder },
+		{ "encoder_init", NULL },
 
 		{ NULL, NULL },
 	};
 	luaL_newlib(L, l);
+	lua_pushvalue(L, -1);
+	lua_pushcclosure(L, linitEncoder, 1);
+	lua_setfield(L, -2, "encoder_init");
 	return 1;
 }
