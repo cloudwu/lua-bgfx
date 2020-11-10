@@ -2,6 +2,14 @@ package.cpath = "bin/?.dll"
 
 local iup = require "iuplua"
 local bgfx = require "bgfx"
+
+-- Test encoder api
+-- It's for multi-thread rendering (You can use encoder api in multiple lua VMs for multi-thread)
+-- 1. Call bgfx.encoder_init() instead of bgfx.init in other VM
+-- 2. Call bgfx.encoder_begin() before each frame
+-- 3. Call bgfx.encoder_end() instead of bgfx.frame() in other VM
+-- encoder_init will replace encoder api
+bgfx.encoder_init()
 local util = require "util"
 local math3d = require "math3d"
 
@@ -423,6 +431,7 @@ local invdim = 1/(DIMS-1)
 
 local time = 0
 local function mainloop()
+	bgfx.encoder_begin()	-- test encoder api
 	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.01
@@ -527,6 +536,7 @@ local function mainloop()
 	bgfx.set_state()	-- default state
 	-- { WRITE_MASK = "RGBAZ", DEPTH_TEST = "LESS", CULL = "CW", MSAA = true }
 	bgfx.submit(0, ctx.prog)
+	bgfx.encoder_end()
 	bgfx.frame()
 end
 

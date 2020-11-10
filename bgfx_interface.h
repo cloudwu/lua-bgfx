@@ -15,7 +15,7 @@ init_interface(lua_State* L) {
 #ifdef BGFX_STATIC_LINK
 	bgfx_interface_vtbl_t* inf = bgfx_get_interface(BGFX_API_VERSION);
 	if (inf == NULL) {
-		luaL_error(L, "BGFX_API_VERSION mismatch.");
+		luaL_error(L, "BGFX_API_VERSION (%d) mismatch.", BGFX_API_VERSION);
 		return;
 	}
 	bgfx_inf_ = inf;
@@ -33,7 +33,7 @@ init_interface(lua_State* L) {
 	}
 	bgfx_interface_vtbl_t* inf = ((PFN_BGFX_GET_INTERFACE)fn)(BGFX_API_VERSION);
 	if (inf == NULL) {
-		luaL_error(L, "BGFX_API_VERSION mismatch.");
+		luaL_error(L, "BGFX_API_VERSION (%d) mismatch.", BGFX_API_VERSION);
 		return;
 	}
 	bgfx_inf_ = inf;
@@ -42,5 +42,6 @@ init_interface(lua_State* L) {
 }
 
 #define BGFX(api) bgfx_inf_->api
+#define BGFX_ENCODER(api, encoder, ...) (encoder ? (BGFX(encoder_##api)( encoder, ## __VA_ARGS__ )) : BGFX(api)( __VA_ARGS__ ))
 
 #endif
