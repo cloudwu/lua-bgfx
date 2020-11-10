@@ -833,7 +833,8 @@ push_texture_formats(lua_State *L, const uint16_t *formats) {
 		CAPSTF(CUBE_SRGB)        //Texture as sRGB format is supported.
 		CAPSTF(CUBE_EMULATED)    //Texture format is emulated.
 		CAPSTF(VERTEX)           //Texture format can be used from vertex shader.
-		CAPSTF(IMAGE)            //Texture format can be used as image from compute shader.
+		CAPSTF(IMAGE_READ)       //Texture format can be used as image and read from.
+		CAPSTF(IMAGE_WRITE)      //Texture format can be used as image and written to.
 		CAPSTF(FRAMEBUFFER)      //Texture format can be used as frame buffer.
 		CAPSTF(FRAMEBUFFER_MSAA) //Texture format can be used as MSAA frame buffer.
 		CAPSTF(MSAA)             //Texture can be sampled as MSAA.
