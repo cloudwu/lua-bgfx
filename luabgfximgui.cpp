@@ -1273,24 +1273,14 @@ wBeginListBox(lua_State *L) {
 	const char *label = luaL_checkstring(L, INDEX_ID);
 	float width = luaL_optnumber(L, 2, 0);
 	float height = luaL_optnumber(L, 3, 0);
-	bool change = ImGui::ListBoxHeader(label, ImVec2(width, height));
-	lua_pushboolean(L, change);
-	return 1;
-}
-
-static int
-wBeginListBoxN(lua_State *L) {
-	const char *label = luaL_checkstring(L, INDEX_ID);
-	int count = luaL_checkinteger(L, 2);
-	int height_in_items = luaL_optinteger(L, 3, -1);
-	bool change = ImGui::ListBoxHeader(label, count, height_in_items);
+	bool change = ImGui::BeginListBox(label, ImVec2(width, height));
 	lua_pushboolean(L, change);
 	return 1;
 }
 
 static int
 wEndListBox(lua_State *L) {
-	ImGui::ListBoxFooter();
+	ImGui::EndListBox();
 	return 0;
 }
 
@@ -2061,7 +2051,7 @@ static struct enum_pair eInputTextFlags[] = {
 	ENUM(ImGuiInputTextFlags, AllowTabInput),
 	ENUM(ImGuiInputTextFlags, CtrlEnterForNewLine),
 	ENUM(ImGuiInputTextFlags, NoHorizontalScroll),
-	ENUM(ImGuiInputTextFlags, AlwaysInsertMode),
+	ENUM(ImGuiInputTextFlags, AlwaysOverwrite),
 	ENUM(ImGuiInputTextFlags, ReadOnly),
 	ENUM(ImGuiInputTextFlags, Password),
 	ENUM(ImGuiInputTextFlags, NoUndoRedo),
@@ -2291,7 +2281,6 @@ luaopen_bgfx_imgui(lua_State *L) {
 		{ "EndMenu", wEndMenu },
 		{ "MenuItem", wMenuItem },
 		{ "BeginListBox", wBeginListBox },
-		{ "BeginListBoxN", wBeginListBoxN },
 		{ "EndListBox", wEndListBox },
 		{ "ListBox", wListBox },
 		{ NULL, NULL },
