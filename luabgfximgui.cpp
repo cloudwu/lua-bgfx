@@ -815,7 +815,7 @@ edit_callback(ImGuiInputTextCallbackData *data) {
 }
 
 static int
-wInputText(lua_State *L) {
+wInputText_(lua_State *L, int multiline) {
 	const char * label = luaL_checkstring(L, INDEX_ID);
 	luaL_checktype(L, INDEX_ARGS, LUA_TTABLE);
 	ImGuiInputTextFlags flags = read_field_int(L, "flags", 0);
@@ -831,7 +831,7 @@ wInputText(lua_State *L) {
 	bool change;
 	flags |= ImGuiInputTextFlags_CallbackResize;
 	int top = lua_gettop(L);
-	if (flags & ImGuiInputTextFlags_Multiline) {
+	if (multiline) {
 		float width = read_field_float(L, "width", 0);
 		float height = read_field_float(L, "height", 0);
 		change = ImGui::InputTextMultiline(label, ebuf->buf, ebuf->size, ImVec2(width, height), flags, edit_callback, ebuf);
@@ -847,6 +847,16 @@ wInputText(lua_State *L) {
 	}
 	lua_pushboolean(L, change);
 	return 1;
+}
+
+static int
+wInputText(lua_State *L) {
+	return wInputText_(L, 0);
+}
+
+static int
+wInputTextMultiline(lua_State *L) {
+	return wInputText_(L, 1);
 }
 
 static bool
@@ -2057,7 +2067,6 @@ static struct enum_pair eInputTextFlags[] = {
 	ENUM(ImGuiInputTextFlags, NoUndoRedo),
 	ENUM(ImGuiInputTextFlags, CharsScientific),
 	ENUM(ImGuiInputTextFlags, CallbackResize),
-	ENUM(ImGuiInputTextFlags, Multiline),
 	{ NULL, 0 },
 };
 
@@ -2254,6 +2263,7 @@ luaopen_bgfx_imgui(lua_State *L) {
 		{ "ColorPicker", wColorPicker },
 		{ "ColorButton", wColorButton },
 		{ "InputText", wInputText },
+		{ "InputTextMultiline", wInputTextMultiline },
 		{ "InputFloat", wInputFloat },
 		{ "InputInt", wInputInt },
 		{ "Text", wText },

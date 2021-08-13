@@ -209,9 +209,13 @@ local function mainloop()
 	local params = packParams()
 	if RESET then
 		RESET = false
-		bgfx.set_buffer(0, ctx.m_prevPositionBuffer0, "w")
-		bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "w")
-		bgfx.set_uniform(ctx.u_params, table.unpack(params))
+--		bgfx.set_buffer(0, ctx.m_prevPositionBuffer0, "w")
+--		bgfx.set_buffer(1, ctx.m_currPositionBuffer0, "w")
+--		bgfx.set_uniform(ctx.u_params, table.unpack(params))
+		local command = bgfx.set_buffer_command(0, ctx.m_prevPositionBuffer0, "w")
+		command = command .. bgfx.set_buffer_command(1, ctx.m_currPositionBuffer0, "w")
+		command = command .. bgfx.set_uniform_command(ctx.u_params, table.unpack(params))
+		bgfx.execute_setter(command)
 		bgfx.dispatch(0, ctx.m_initInstancesProgram, kMaxParticleCount // kThreadGroupUpdateSize, 1, 1)
 	end
 

@@ -50,8 +50,11 @@ local function mainloop()
 	local lightDirTime = math3d.transform(math3d.inverse(mtx) , lightDirModelN, 0)
 
 	bgfx.set_uniform(ctx.u_lightDirTime, math3d.vector(lightDirTime, time)) --	lightDirTime[4] = time
+--	local command = bgfx.set_uniform_command(ctx.u_lightDirTime, math3d.vector(lightDirTime, time))
 	local invMvp = math3d.inverse(math3d.mul(vp, mtx))
 	bgfx.set_uniform(ctx.u_mtx, invMvp)
+--	command = command .. bgfx.set_uniform_command(ctx.u_mtx, invMvp)
+--	bgfx.execute_setter(command)
 
 	renderScreenSpaceQuad(0.0, 0.0, 1280.0, 720.0)
 
