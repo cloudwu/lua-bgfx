@@ -5,7 +5,11 @@
 #include <lauxlib.h>
 #include <bgfx/c99/bgfx.h>
 
-static bgfx_interface_vtbl_t* bgfx_inf_ = 0;
+extern bgfx_interface_vtbl_t* bgfx_inf_;
+
+#ifndef BGFX_INTERFACE_IMPORT
+bgfx_interface_vtbl_t* bgfx_inf_ = 0;
+#endif
 
 static inline void
 init_interface(lua_State* L) {
