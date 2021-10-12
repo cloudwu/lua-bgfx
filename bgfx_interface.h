@@ -19,8 +19,6 @@ init_interface(lua_State* L) {
 		return;
 	}
 	bgfx_inf_ = inf;
-	lua_pushcfunction(L, (lua_CFunction)bgfx_get_interface);
-	lua_setfield(L, LUA_REGISTRYINDEX, "BGFX_GET_INTERFACE");
 #else
 	if (LUA_TFUNCTION != lua_getfield(L, LUA_REGISTRYINDEX, "BGFX_GET_INTERFACE")) {
 		luaL_error(L, "BGFX_GET_INTERFACE is missing.");
