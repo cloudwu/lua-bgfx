@@ -47,7 +47,17 @@ function ctx.init()
 		{ "POSITION", 3, "FLOAT" },
 		{ "COLOR0", 4, "UINT8", true },
 	}
-	ctx.vb = bgfx.create_vertex_buffer(bgfx.memory_buffer("fffd", {
+	local buf = bgfx.memory_buffer( 16 * 8)
+	buf[1]    = string.pack("fffL", -1.0,  1.0,  1.0, 0xff000000)
+	buf[16+1] = string.pack("fffL", 1.0,  1.0,  1.0, 0xff0000ff)
+	buf[32+1] = string.pack("fffL", -1.0, -1.0,  1.0, 0xff00ff00)
+	buf[48+1] = string.pack("fffL", 1.0, -1.0,  1.0, 0xff00ffff)
+	buf[64+1] = string.pack("fffL", -1.0,  1.0, -1.0, 0xffff0000)
+	buf[80+1] = string.pack("fffL", 1.0,  1.0, -1.0, 0xffff00ff)
+	buf[96+1] = string.pack("fffL", -1.0, -1.0, -1.0, 0xffffff00)
+	buf[112+1] = string.pack("fffL", 1.0, -1.0, -1.0, 0xffffffff)
+--[[
+	local buf = bgfx.memory_buffer("fffd", {
 			-1.0,  1.0,  1.0, 0xff000000,
 			 1.0,  1.0,  1.0, 0xff0000ff,
 			-1.0, -1.0,  1.0, 0xff00ff00,
@@ -56,7 +66,9 @@ function ctx.init()
 			 1.0,  1.0, -1.0, 0xffff00ff,
 			-1.0, -1.0, -1.0, 0xffffff00,
 			 1.0, -1.0, -1.0, 0xffffffff,
-		}),	ctx.vdecl)
+		})
+	]]
+	ctx.vb = bgfx.create_vertex_buffer(buf, ctx.vdecl)
 	ctx.ib = bgfx.create_index_buffer{
 		0, 1, 2, 3, 7, 1, 5, 0, 4, 2, 6, 7, 4, 5,
 	}
