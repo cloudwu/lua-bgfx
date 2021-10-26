@@ -32,10 +32,13 @@ $(ODIR)/luabgfximgui.o : luabgfximgui.cpp  | $(ODIR)
 $(ODIR)/bgfx_alloc.o : bgfx_alloc.cpp  | $(ODIR)
 	$(CXX) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC) $(BGFXUTILINC)
 
+$(ODIR)/bgfx_interface.o : bgfx_interface.cpp  | $(ODIR)
+	$(CXX) $(CFLAGS) -c -DLUA_BUILD_AS_DLL -o $@ $^ $(LUAINC) $(BGFXINC) $(BGFXUTILINC)
+
 bin :
 	mkdir $@
 
-bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o $(ODIR)/luabgfximgui.o $(ODIR)/bgfx_alloc.o | bin
+bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o $(ODIR)/luabgfximgui.o $(ODIR)/bgfx_alloc.o $(ODIR)/bgfx_interface.o | bin
 	$(CC) $(CFLAGS) --shared -o $@ $^ $(LUALIB) $(BGFXUTILLIB) $(BIMGLIB) $(BGFXLIB)
 
 math :

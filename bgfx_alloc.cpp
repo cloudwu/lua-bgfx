@@ -1,7 +1,7 @@
 #include "bgfx_alloc.h"
 #include <bx/allocator.h>
 #include <atomic>
-#include <malloc.h>
+#include <stdlib.h>
 
 #ifndef BX_CONFIG_ALLOCATOR_NATURAL_ALIGNMENT
 #    define BX_CONFIG_ALLOCATOR_NATURAL_ALIGNMENT 8
@@ -15,8 +15,10 @@ static std::atomic<int64_t> allocator_memory (0);
 #elif BX_PLATFORM_LINUX
 #define bx_malloc_size malloc_usable_size
 #elif BX_PLATFORM_OSX
+#include <malloc/malloc.h>
 #define bx_malloc_size malloc_size
 #elif BX_PLATFORM_IOS
+#include <malloc/malloc.h>
 #define bx_malloc_size malloc_size
 #else
 #    error "Unknown PLATFORM!"
