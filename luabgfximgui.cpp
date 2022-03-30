@@ -1622,13 +1622,6 @@ winGetWindowContentRegionMax(lua_State *L) {
 	return 2;
 }
 
-static int
-winGetWindowContentRegionWidth(lua_State *L) {
-	float w = ImGui::GetWindowContentRegionWidth();
-	lua_pushnumber(L, w);
-	return 1;
-}
-
 // cursor and layout
 
 static int
@@ -1992,26 +1985,6 @@ uSaveIniSettings(lua_State *L) {
 	}
 }
 
-// key, press, state
-static int
-lkeyState(lua_State *L) {
-	int key = luaL_checkinteger(L, 1);
-	int press = lua_toboolean(L, 2);
-	int state = luaL_checkinteger(L, 3);
-
-	ImGuiIO& io = ImGui::GetIO();
-
-	io.KeyCtrl = (state & 0x01) != 0;
-	io.KeyAlt = (state & 0x02) != 0;
-	io.KeyShift = (state & 0x04) != 0;
-	io.KeySuper = (state & 0x08) != 0;
-
-	if (key >=0 && key < 256) {
-		io.KeysDown[key] = press;
-	}
-	return 0;
-}
-
 static int
 linputChar(lua_State *L) {
 	int c = luaL_checkinteger(L, 1);
@@ -2174,69 +2147,14 @@ struct keymap {
 	int index;
 };
 
-static int
-lkeymap(lua_State *L) {
-	static struct keymap map[] = {
-		{ "Tab", ImGuiKey_Tab },
-		{ "Left", ImGuiKey_LeftArrow },
-		{ "Right", ImGuiKey_RightArrow },
-		{ "Up", ImGuiKey_UpArrow },
-		{ "Down", ImGuiKey_DownArrow },
-		{ "PageUp", ImGuiKey_PageUp },
-		{ "PageDown", ImGuiKey_PageDown },
-		{ "Home", ImGuiKey_Home },
-		{ "End", ImGuiKey_End },
-		{ "Insert", ImGuiKey_Insert },
-		{ "Delete", ImGuiKey_Delete },
-		{ "Backspace", ImGuiKey_Backspace },
-		{ "Space", ImGuiKey_Space },
-		{ "Enter", ImGuiKey_Enter },
-		{ "Escape", ImGuiKey_Escape },
-		{ "A", 'A' },
-		{ "C", 'C' },
-		{ "V", 'V' },
-		{ "X", 'X' },
-		{ "Y", 'Y' },
-		{ "Z", 'Z' },
-		{ NULL, 0 },
-	};
-	ImGuiIO& io = ImGui::GetIO();
-	io.KeyMap[ImGuiKey_A] = 'A';
-	io.KeyMap[ImGuiKey_C] = 'C';
-	io.KeyMap[ImGuiKey_V] = 'V';
-	io.KeyMap[ImGuiKey_X] = 'X';
-	io.KeyMap[ImGuiKey_Y] = 'Y';
-	io.KeyMap[ImGuiKey_Z] = 'Z';
-
-	luaL_checktype(L, 1, LUA_TTABLE);
-	lua_pushnil(L);
-	while (lua_next(L, 1) != 0) {
-		if (lua_type(L, -2) == LUA_TSTRING && lua_type(L, -1) == LUA_TNUMBER && lua_isinteger(L, -1)) {
-			const char * key = lua_tostring(L, -2);
-			int value = lua_tointeger(L, -1);
-			int i;
-			for (i=0;map[i].name;i++) {
-				if (strcmp(map[i].name, key) == 0) {
-					io.KeyMap[map[i].index] = value;
-					break;
-				}
-			}
-		}
-		lua_pop(L, 1);
-	}
-	return 0;
-}
-
 extern "C" LUAMOD_API int
 luaopen_bgfx_imgui(lua_State *L) {
 	luaL_checkversion(L);
 	luaL_Reg l[] = {
 		{ "create", lcreate },
 		{ "destroy", ldestroy },
-		{ "keymap", lkeymap },
 		{ "begin_frame", lbeginFrame },
 		{ "end_frame", lendFrame },
-		{ "key_state", lkeyState },
 		{ "input_char", linputChar },
 		{ NULL, NULL },
 	};
@@ -2360,7 +2278,6 @@ luaopen_bgfx_imgui(lua_State *L) {
 		{ "GetContentRegionAvail", winGetContentRegionAvail },
 		{ "GetWindowContentRegionMin", winGetWindowContentRegionMin },
 		{ "GetWindowContentRegionMax", winGetWindowContentRegionMax },
-		{ "GetWindowContentRegionWidth", winGetWindowContentRegionWidth },
 		{ NULL, NULL },
 	};
 

@@ -7,7 +7,7 @@ LUALIB = -L/usr/local/bin -llua54
 
 CC= gcc
 CXX = g++
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -DBX_CONFIG_DEBUG=1
 
 all :
 
