@@ -108,6 +108,10 @@ do
 		local csid = load_shader(cs)
 		return bgfx.create_program(csid, true)
 	end
+
+	function util.shaderLoad(s)
+		return load_shader(s)
+	end
 end
 
 do
