@@ -101,6 +101,7 @@ struct callback {
 	bgfx_callback_interface_t base;
 	struct screenshot_queue ss;
 	struct log_cache lc;
+	uint32_t filterlog;
 	bool getlog;
 };
 
@@ -342,13 +343,34 @@ cb_fatal(bgfx_callback_interface_t *self, const char* filePath, uint16_t line, b
 	abort();
 }
 
+#define PREFIX(str, cstr) (memcmp(str, cstr"", sizeof(cstr)-1) == 0)
+
+static int
+trace_filter(const char *format, int level) {
+	if (!PREFIX(format, "BGFX "))
+		return 1;
+	if (level <= 1)
+		return 0;
+	format += 5;	// skip "BGFX "
+	if (PREFIX(format, "ASSERT ")) {
+		return 2;
+	}
+	if (level <=2)
+		return 0;
+	if (PREFIX(format, "WARN ")) {
+		return 3;
+	}
+	if (level <=3)
+		return 0;
+	return 4;
+}
+
 static void
 cb_trace_vargs(bgfx_callback_interface_t *self, const char *file, uint16_t line, const char *format, va_list ap) {
 	char tmp[MAX_LOGBUFFER];
 	int n = sprintf(tmp, "%s (%d): ", file, line);
 
 	n += vsnprintf(tmp+n, sizeof(tmp)-n, format, ap);
-
 	if (n > MAX_LOGBUFFER) {
 		// truncated
 		n = MAX_LOGBUFFER;
@@ -356,8 +378,10 @@ cb_trace_vargs(bgfx_callback_interface_t *self, const char *file, uint16_t line,
 	struct callback * cb = (struct callback *)self;
 	if (cb->getlog) {
 		append_log(&(cb->lc), tmp, n);
-	} else {
+	}
+	if (cb->filterlog > 0 && trace_filter(format, cb->filterlog)) {
 		fputs(tmp, stdout);
+		fflush(stdout);
 	}
 }
 
@@ -623,6 +647,12 @@ linit(lua_State *L) {
 		read_boolean(L, 1, "debug", &init.debug);
 		read_boolean(L, 1, "profile", &init.profile);
 		read_boolean(L, 1, "getlog", &cb->getlog);
+		if (cb->getlog) {
+			cb->filterlog = 0;	// log none
+		} else {
+			cb->filterlog = 255;	// log all
+		}
+		read_uint32(L, 1, "loglevel", &cb->filterlog);
 
 		init.platformData.ndt = getfield(L, "ndt");
 		init.platformData.nwh = getfield(L, "nwh");
@@ -4773,6 +4803,9 @@ lgetShaderUniforms(lua_State *L) {
 	uint16_t sid = BGFX_LUAHANDLE_ID(SHADER, luaL_checkinteger(L, 1));
 	bgfx_shader_handle_t shader = { sid };
 	uint16_t n = BGFX(get_shader_uniforms)(shader, NULL, 0);
+	if (n == 0){
+		return 0;
+	}
 	lua_createtable(L, n, 0);
 	bgfx_uniform_handle_t u[V(n)];
 	BGFX(get_shader_uniforms)(shader, u, n);	

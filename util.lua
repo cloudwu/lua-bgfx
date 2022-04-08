@@ -253,6 +253,7 @@ function util.init(args)
 			debug = args.debug,
 			profile = args.profile,
 			getlog = args.getlog,
+			loglevel = args.loglevel,
 			numBackBuffers = args.numBackBuffers,
 			maxFrameLatency = args.maxFrameLatency,
 
