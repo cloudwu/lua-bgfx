@@ -12,8 +12,8 @@ CFLAGS = -g -Wall -DBX_CONFIG_DEBUG=1
 all :
 
 # bgfx
-#BGFXVER = Debug
-BGFXVER = Release
+BGFXVER = Debug
+#BGFXVER = Release
 BGFXLIB = -L$(BGFXSRC)/.build/win64_mingw-gcc/bin -lbgfx$(BGFXVER) -lbimg$(BGFXVER) -lbx$(BGFXVER) -lstdc++ -lgdi32 -lpsapi -luuid
 BGFXINC = -I$(BGFXSRC)/include -I$(BXSRC)/include/compat/mingw -I$(BXSRC)/include
 BGFX3RDINC = -I$(BGFXSRC)/3rdparty

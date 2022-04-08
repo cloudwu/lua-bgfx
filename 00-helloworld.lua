@@ -260,6 +260,7 @@ local s_logo = "\z
 local ctx = {
 	canvas = iup.canvas{},
 	stats = {},
+	loglevel = 3,
 }
 
 local dlg = iup.dialog {

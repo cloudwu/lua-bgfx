@@ -347,6 +347,8 @@ cb_fatal(bgfx_callback_interface_t *self, const char* filePath, uint16_t line, b
 
 static int
 trace_filter(const char *format, int level) {
+	if (level > 4)
+		return 1;
 	if (!PREFIX(format, "BGFX "))
 		return 1;
 	if (level <= 1)
