@@ -343,7 +343,7 @@ cb_fatal(bgfx_callback_interface_t *self, const char* filePath, uint16_t line, b
 	abort();
 }
 
-#define PREFIX(str, cstr) (memcmp(str, cstr"", sizeof(cstr)-1) == 0)
+#define PREFIX(str, cstr) (strncmp(str, cstr"", sizeof(cstr)-1) == 0)
 
 static int
 trace_filter(const char *format, int level) {
@@ -3698,21 +3698,22 @@ get_texture_flags(lua_State *L, const char *format) {
 			continue;
 		case 'r':	// RT
 			switch(format[i+1]) {
-			case 't': flags |= BGFX_TEXTURE_RT; break;
-			case 'w': flags |= BGFX_TEXTURE_RT_WRITE_ONLY; break;
-			case '2': flags |= BGFX_TEXTURE_RT_MSAA_X2; break;
-			case '4': flags |= BGFX_TEXTURE_RT_MSAA_X4; break;
-			case '8': flags |= BGFX_TEXTURE_RT_MSAA_X8; break;
-			case 'x': flags |= BGFX_TEXTURE_RT_MSAA_X16; break;
+			case 't': flags |= BGFX_TEXTURE_RT; 			break;
+			case 'w': flags |= BGFX_TEXTURE_RT_WRITE_ONLY;	break;
+			case 's': flags |= BGFX_TEXTURE_MSAA_SAMPLE;	break;
+			case '2': flags |= BGFX_TEXTURE_RT_MSAA_X2;		break;
+			case '4': flags |= BGFX_TEXTURE_RT_MSAA_X4;		break;
+			case '8': flags |= BGFX_TEXTURE_RT_MSAA_X8;		break;
+			case 'x': flags |= BGFX_TEXTURE_RT_MSAA_X16;	break;
 			default:
 				luaL_error(L, "Invalid RT MSAA %c", format[i+1]);
 			}
 			continue;
 		case 'b': // BLIT
 			switch(format[i+1]) {
-			case 'r' : flags |= BGFX_TEXTURE_READ_BACK; break;
-			case 'w' : flags |= BGFX_TEXTURE_BLIT_DST; break;
-			case 'c' : flags |= BGFX_TEXTURE_COMPUTE_WRITE; break;
+			case 'r' : flags |= BGFX_TEXTURE_READ_BACK;		break;
+			case 'w' : flags |= BGFX_TEXTURE_BLIT_DST;		break;
+			case 'c' : flags |= BGFX_TEXTURE_COMPUTE_WRITE;	break;
 			default:
 				luaL_error(L, "Invalid BLIT %c", format[i+1]);
 			}
@@ -3749,20 +3750,20 @@ get_texture_flags(lua_State *L, const char *format) {
 			luaL_error(L, "Invalid texture flags %c", format[i+1]);
 		}
 		switch(t) {
-		case 0x0f:								   break;
-		case 0x01: flags |= BGFX_SAMPLER_U_MIRROR; break;
-		case 0x02: flags |= BGFX_SAMPLER_U_CLAMP;  break;
-		case 0x03: flags |= BGFX_SAMPLER_U_BORDER; break;
+		case 0x0f:									break;
+		case 0x01: flags |= BGFX_SAMPLER_U_MIRROR;	break;
+		case 0x02: flags |= BGFX_SAMPLER_U_CLAMP;	break;
+		case 0x03: flags |= BGFX_SAMPLER_U_BORDER;	break;
 
 		case 0x1f: 									break;
-		case 0x11: flags |= BGFX_SAMPLER_V_MIRROR; break;
-		case 0x12: flags |= BGFX_SAMPLER_V_CLAMP;  break;
-		case 0x13: flags |= BGFX_SAMPLER_V_BORDER; break;
+		case 0x11: flags |= BGFX_SAMPLER_V_MIRROR;	break;
+		case 0x12: flags |= BGFX_SAMPLER_V_CLAMP;	break;
+		case 0x13: flags |= BGFX_SAMPLER_V_BORDER;	break;
 
 		case 0x2f: 									break;
-		case 0x21: flags |= BGFX_SAMPLER_W_MIRROR; break;
-		case 0x22: flags |= BGFX_SAMPLER_W_CLAMP;  break;
-		case 0x23: flags |= BGFX_SAMPLER_W_BORDER; break;
+		case 0x21: flags |= BGFX_SAMPLER_W_MIRROR;	break;
+		case 0x22: flags |= BGFX_SAMPLER_W_CLAMP;	break;
+		case 0x23: flags |= BGFX_SAMPLER_W_BORDER;	break;
 
 		case 0x3e: 									break;
 		case 0x34: flags |= BGFX_SAMPLER_MIN_POINT; break;
@@ -3775,13 +3776,13 @@ get_texture_flags(lua_State *L, const char *format) {
 		case 0x5e: 									break;
 		case 0x54: flags |= BGFX_SAMPLER_MIP_POINT; break;
 
-		case 0x6f: 									 break;
-		case 0x61: flags |= BGFX_SAMPLER_UVW_MIRROR; break;
-		case 0x62: flags |= BGFX_SAMPLER_UVW_CLAMP;  break;
-		case 0x63: flags |= BGFX_SAMPLER_UVW_BORDER; break;
+		case 0x6f: 									break;
+		case 0x61: flags |= BGFX_SAMPLER_UVW_MIRROR;break;
+		case 0x62: flags |= BGFX_SAMPLER_UVW_CLAMP; break;
+		case 0x63: flags |= BGFX_SAMPLER_UVW_BORDER;break;
 
-		case 0x6e: 								break;
-		case 0x64: flags |= BGFX_SAMPLER_POINT; break;
+		case 0x6e: 									break;
+		case 0x64: flags |= BGFX_SAMPLER_POINT; 	break;
 		default:
 			luaL_error(L, "Invalid texture flags %c%c", format[i], format[i+1]);
 		}
@@ -3998,8 +3999,6 @@ create_fb_mrt(lua_State *L) {
 	for (i=0;i<n;i++) {
 		if (lua_geti(L, 1, i+1) == LUA_TNUMBER) {
 			attachments[i].handle.idx = BGFX_LUAHANDLE_ID(TEXTURE, lua_tointeger(L, -1));
-			lua_pop(L, 1);
-
 			attachments[i].access = BGFX_ACCESS_WRITE;
 			attachments[i].mip = 0;
 			attachments[i].layer = 0;
@@ -4049,6 +4048,7 @@ create_fb_mrt(lua_State *L) {
 			attachments[i].numLayers = lua_getfield(L, -1, "numlayer") == LUA_TNUMBER ? (uint16_t)lua_tointeger(L, -1) : 1;
 			lua_pop(L, 1);
 		}
+		lua_pop(L, 1);
 	}
 	return BGFX(create_frame_buffer_from_attachment)(n, attachments, destroy);
 }
@@ -5164,6 +5164,7 @@ lbeginEncoder(lua_State *L) {
 		luaL_error(L, "Call bgfx.encoder_init first");
 	}
 	struct encoder_holder *E = (struct encoder_holder *)lua_touserdata(L, -1);
+	lua_pop(L, 1);
 	E->encoder = BGFX(encoder_begin)(1);
 	return 0;
 }
@@ -5174,12 +5175,25 @@ lendEncoder(lua_State *L) {
 		luaL_error(L, "Call bgfx.encoder_init first");
 	}
 	struct encoder_holder *E = (struct encoder_holder *)lua_touserdata(L, -1);
+	lua_pop(L, 1);
 	if (E->encoder == NULL) {
 		luaL_error(L, "Call bgfx.encoder_begin first");
 	}
 	BGFX(encoder_end)(E->encoder);
 	E->encoder = NULL;
 	return 0;
+}
+
+static int
+lgetEncoder(lua_State *L){
+	if (lua_rawgetp(L, LUA_REGISTRYINDEX, ENCODER) != LUA_TUSERDATA) {
+		return luaL_error(L, "Call bgfx.encoder_init first");
+	}
+
+	struct encoder_holder *E = (struct encoder_holder *)lua_touserdata(L, -1);
+	lua_pop(L, 1);
+	lua_pushlightuserdata(L, E);
+	return 1;
 }
 
 static int
@@ -5401,9 +5415,10 @@ luaopen_bgfx(lua_State *L) {
 		{ "set_image", lsetImage },
 		{ "execute_setter", lexecuteSetter },
 
-		{ "encoder_begin", lbeginEncoder },
-		{ "encoder_end", lendEncoder },
-		{ "encoder_init", NULL },
+		{ "encoder_begin",	lbeginEncoder },
+		{ "encoder_end", 	lendEncoder },
+		{ "encoder_get",	lgetEncoder},
+		{ "encoder_init", 	NULL },
 
 		{ "CINTERFACE", NULL },
 
