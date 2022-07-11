@@ -1202,6 +1202,14 @@ lframe(lua_State *L) {
 }
 
 static int
+lrenderFrame(lua_State *L) {
+	int msecs = luaL_optinteger(L, 1, -1);
+	bgfx_render_frame_t status = bgfx_render_frame(msecs);
+	lua_pushinteger(L, status);
+	return 1;
+}
+
+static int
 lsetDebug(lua_State *L) {
 	const char *flags = luaL_checkstring(L, 1);
 	int flag = BGFX_DEBUG_NONE;
@@ -5389,6 +5397,7 @@ luaopen_bgfx(lua_State *L) {
 
 		{ "reset", lreset },
 		{ "frame", lframe },
+		{ "render_frame", lrenderFrame },
 		{ "set_debug", lsetDebug },
 		{ "set_name", lsetName },
 

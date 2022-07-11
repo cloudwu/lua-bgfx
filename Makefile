@@ -4,10 +4,14 @@ BXSRC = ../bx
 BIMGSRC = ../bimg
 LUAINC = -I/usr/local/include
 LUALIB = -L/usr/local/bin -llua54
+SDLINC = -I../SDL/include
+SDLLIB = -Lbin -lSDL2
 
 CC= gcc
 CXX = g++
 CFLAGS = -g -Wall -DBX_CONFIG_DEBUG=1
+
+.PHONY : all math sdlwnd
 
 all :
 
@@ -44,6 +48,11 @@ bin/bgfx.dll : $(ODIR)/luabgfx.o $(ODIR)/luabgfxutil.o $(ODIR)/luabgfximgui.o $(
 math :
 	cd math3d && $(MAKE) OUTPUT=../bin/
 
+sdlwnd : bin/sdlwnd.dll
+
+bin/sdlwnd.dll : sdlwnd.c
+	$(CC) $(CFLAGS) --shared -o $@ $^ $(SDLINC) $(SDLLIB) $(LUAINC) $(LUALIB)
+
 bin/math3d.dll : | bin
 	cd math3d && $(MAKE) OUTPUT=../bin/
 
@@ -55,4 +64,4 @@ $(ODIR) :
 	mkdir $@
 
 clean :
-	rm -rf $(ODIR) && rm -f bin/bgfx.dll bin/math3d.dll
+	rm -rf $(ODIR) && rm -f bin/bgfx.dll bin/math3d.dll bin/sdlwnd.dll

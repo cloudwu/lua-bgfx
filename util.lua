@@ -2,7 +2,6 @@
 
 local util = {}
 
-local iup = require "iuplua"
 local bgfx = require "bgfx"
 local math3d = require "math3d"
 local adapter = require "mathadapter"
@@ -239,83 +238,191 @@ function util.textureLoad(filename, info)
 	return h
 end
 
-local init_flag
+local function use_iup()
+	local init_flag
 
-function util.init(args)
-	local canvas = assert(args.canvas)
-	local function init()
-		bgfx.init {
-			renderer = args.renderer,
-			format = args.format,
-			width = args.width,
-			height = args.height,
-			reset = args.reset,
-			debug = args.debug,
-			profile = args.profile,
-			getlog = args.getlog,
-			loglevel = args.loglevel,
-			numBackBuffers = args.numBackBuffers,
-			maxFrameLatency = args.maxFrameLatency,
+	local iup = require "iuplua"
 
-			-- platform data
-			ndt = args.ndt,
-			nwh = iup.GetAttributeData(canvas,"HWND"),
-			context = args.context,
-			backBuffer = args.backBuffer,
-			backBufferDS = args.backBufferDS,
-		}
-		util.caps = bgfx.get_caps()
-		math3d.set_homogeneous_depth(util.caps.homogeneousDepth)
-		init_shader_path(util.caps)
-		init_flag = true
-		bgfx.set_debug "T"
-	end
+	function util.init(args)
+		local canvas = assert(args.canvas)
+		local function init()
+			bgfx.init {
+				renderer = args.renderer,
+				format = args.format,
+				width = args.width,
+				height = args.height,
+				reset = args.reset,
+				debug = args.debug,
+				profile = args.profile,
+				getlog = args.getlog,
+				loglevel = args.loglevel,
+				numBackBuffers = args.numBackBuffers,
+				maxFrameLatency = args.maxFrameLatency,
 
-	function canvas:resize_cb(w,h)
-		if init_flag == nil then
-			init()
-			if args.init then
-				args.init(w,h)
-			end
+				-- platform data
+				ndt = args.ndt,
+				nwh = iup.GetAttributeData(canvas,"HWND"),
+				context = args.context,
+				backBuffer = args.backBuffer,
+				backBufferDS = args.backBufferDS,
+			}
+			util.caps = bgfx.get_caps()
+			math3d.set_homogeneous_depth(util.caps.homogeneousDepth)
+			init_shader_path(util.caps)
 			init_flag = true
+			bgfx.set_debug "T"
 		end
-		if args.resize then
-			args.resize(w,h)
+
+		function canvas:resize_cb(w,h)
+			if init_flag == nil then
+				init()
+				if args.init then
+					args.init(w,h)
+				end
+				init_flag = true
+			end
+			if args.resize then
+				args.resize(w,h)
+			end
+		end
+
+		local debug
+
+		function canvas:keypress_cb(key, press)
+			if press == 0 then
+				return
+			end
+			if key ==  iup.K_F1 then
+				debug = not debug
+				bgfx.set_debug(debug and "ST" or "T")
+			elseif key == iup.K_F12 then
+				bgfx.request_screenshot()
+			end
 		end
 	end
 
-	local debug
+	function util.run(f)
+		iup.SetIdle(function ()
+			assert(init_flag)
+			save_screenshot "screenshot.ppm"
+			local ok , err = xpcall(f, debug.traceback)
+			if not ok then
+				print(err)
+				iup.SetIdle()
+			end
+			return iup.DEFAULT
+		end)
 
-	function canvas:keypress_cb(key, press)
-		if press == 0 then
-			return
-		end
-		if key ==  iup.K_F1 then
-			debug = not debug
-			bgfx.set_debug(debug and "ST" or "T")
-		elseif key == iup.K_F12 then
-			bgfx.request_screenshot()
+		iup.MainLoop()
+		iup.Close()
+		if init_flag then
+			bgfx.shutdown()
 		end
 	end
 end
 
-function util.run(f)
-	iup.SetIdle(function ()
-		assert(init_flag)
-		save_screenshot "screenshot.ppm"
-		local ok , err = xpcall(f, debug.traceback)
-		if not ok then
-			print(err)
-			iup.SetIdle()
-		end
-		return iup.DEFAULT
-	end)
+local function use_sdl()
+	local init_flag
 
-	iup.MainLoop()
-	iup.Close()
-	if init_flag then
+	local sdl = require "sdlwnd"
+
+	local EVENT = {}
+
+	function util.init(args)
+		sdl.init(args)
+
+		local function init()
+			-- prevent creation of a renderer thread
+			bgfx.set_platform_data {
+				nwh = sdl.handle()
+			}
+			bgfx.render_frame()
+			bgfx.init {
+				renderer = args.renderer,
+				format = args.format,
+				width = args.width,
+				height = args.height,
+				reset = args.reset,
+				debug = args.debug,
+				profile = args.profile,
+				getlog = args.getlog,
+				loglevel = args.loglevel,
+				numBackBuffers = args.numBackBuffers,
+				maxFrameLatency = args.maxFrameLatency,
+
+				-- platform data
+				ndt = args.ndt,
+				nwh = sdl.handle(),
+				context = args.context,
+				backBuffer = args.backBuffer,
+				backBufferDS = args.backBufferDS,
+			}
+			util.caps = bgfx.get_caps()
+			math3d.set_homogeneous_depth(util.caps.homogeneousDepth)
+			init_shader_path(util.caps)
+			init_flag = true
+			bgfx.set_debug "T"
+		end
+
+		init()
+		if args.init then
+			args.init()
+		end
+		EVENT.RESIZE = args.resize
+	end
+
+	function EVENT.QUIT()
+		return true
+	end
+
+	do
+		local debug
+
+		function EVENT.KEY(key, press)
+			if not press then
+				return
+			end
+			if key == "F1" then
+				debug = not debug
+				bgfx.set_debug(debug and "ST" or "T")
+			elseif key == "F12" then
+				bgfx.request_screenshot()
+			end
+		end
+	end
+
+	function EVENT.MOTION(x, y)
+	end
+
+	function EVENT.BUTTON(x, y, button, pressed, click)
+	end
+
+	local function dispatch(name, ...)
+		if name then
+			return not EVENT[name](...)
+		else
+			return true
+		end
+	end
+
+	function util.run(f)
+		while dispatch(sdl.event()) do
+			save_screenshot "screenshot.ppm"
+			local ok , err = xpcall(f, debug.traceback)
+			if not ok then
+				print(err)
+				break
+			end
+			sdl.frame()
+		end
 		bgfx.shutdown()
 	end
+end
+
+if SDL then
+	use_sdl()
+else
+	use_iup()
 end
 
 return util
