@@ -2128,7 +2128,7 @@ function ctx.init()
 	Uniforms.shadowMapMtx2 = ctx.m_shadowMapMtx[3]
 	Uniforms.shadowMapMtx3 = ctx.m_shadowMapMtx[4]
 
-	submitConstUniforms()
+--	submitConstUniforms()
 
 	-- Render targets.
 	local shadowMapSize = 1 << settings.sizePwrTwo
