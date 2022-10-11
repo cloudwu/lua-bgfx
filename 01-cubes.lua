@@ -24,14 +24,6 @@ local function mainloop()
 	math3d.reset()
 	bgfx.touch(0)
 	time = time + 0.001
-	local transform = {}
-	local n = 1
-	for yy = 0, 9 do
-		for xx = 0, 9 do
-			transform[n] = { r = { time + xx*0.21, time + yy*0.37, 0 }, t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 } }
-			n = n + 1
-		end
-	end
 	for yy = 0, 10 do
 		for xx = 0, 10 do
 			bgfx.set_transform { r = { time + xx*0.21, time + yy*0.37, 0 }, t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 } }
