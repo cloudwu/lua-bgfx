@@ -32,22 +32,15 @@ local function mainloop()
 			n = n + 1
 		end
 	end
-	local tid = bgfx.alloc_transform(table.unpack(transform))
-	bgfx.set_vertex_buffer(ctx.vb)
-	bgfx.set_index_buffer(ctx.ib)
-	bgfx.set_state(ctx.state)
-	bgfx.multi_submit(0, ctx.prog, tid, 100)
-
---	for yy = 0, 10 do
---		for xx = 0, 10 do
---			bgfx.set_transform { r = { time + xx*0.21, time + yy*0.37, 0 }, t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 } }
---			bgfx.set_vertex_buffer(ctx.vb)
---			bgfx.set_index_buffer(ctx.ib)
---			bgfx.set_state(ctx.state)
---			bgfx.submit(0, ctx.prog)
---		end
---	end
-
+	for yy = 0, 10 do
+		for xx = 0, 10 do
+			bgfx.set_transform { r = { time + xx*0.21, time + yy*0.37, 0 }, t = { -15.0 + xx * 3, -15.0 + yy * 3, 0 } }
+			bgfx.set_vertex_buffer(ctx.vb)
+			bgfx.set_index_buffer(ctx.ib)
+			bgfx.set_state(ctx.state)
+			bgfx.submit(0, ctx.prog)
+		end
+	end
 	bgfx.frame()
 end
 
