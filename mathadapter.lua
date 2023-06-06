@@ -1,6 +1,6 @@
 local bgfx = require "bgfx"
 local math3d = require "math3d"
-local adapter = require "math3d.adapter"
+local adapter = require "math3d.adapter" (math3d._COBJECT)
 
 bgfx.set_transform = adapter.matrix(bgfx.set_transform, 1, 0)
 bgfx.set_view_transform = adapter.matrix(bgfx.set_view_transform, 2, 2)
