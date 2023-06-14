@@ -258,6 +258,7 @@ local function use_iup()
 				loglevel = args.loglevel,
 				numBackBuffers = args.numBackBuffers,
 				maxFrameLatency = args.maxFrameLatency,
+				debugTextScale = args.debugTextScale,
 
 				-- platform data
 				ndt = args.ndt,

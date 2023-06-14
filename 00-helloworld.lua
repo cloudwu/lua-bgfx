@@ -261,6 +261,7 @@ local ctx = {
 	canvas = iup.canvas{},
 	stats = {},
 	loglevel = 3,
+	debugTextScale = 1,
 }
 
 local dlg = iup.dialog {
@@ -285,8 +286,9 @@ local function mainloop()
 	bgfx.touch(0)
 
 	bgfx.dbg_text_clear()
-	bgfx.dbg_text_image(math.max(ctx.width //2//8 , 20)-20
-				, math.max(ctx.height//2//16, 6)-6
+	local stats = bgfx.get_stats("sd",ctx.stats)
+	bgfx.dbg_text_image(math.max(stats.textWidth //2 , 20)-20
+				, math.max(stats.textHeight//2, 6)-6
 				, 40
 				, 12
 				, s_logo
@@ -294,7 +296,6 @@ local function mainloop()
 				)
 
 	bgfx.dbg_text_print(0, 1, 0xf, "Color can be changed with ANSI \x1b[9;me\x1b[10;ms\x1b[11;mc\x1b[12;ma\x1b[13;mp\x1b[14;me\x1b[0m code too.");
-	local stats = bgfx.get_stats("sd",ctx.stats)
 	bgfx.dbg_text_print(0, 2, 0x0f, string.format("Backbuffer %dW x %dH in pixels, debug text %dW x %dH in characters."
 				, stats.width
 				, stats.height
