@@ -21,7 +21,7 @@
 #include <android/log.h>
 #endif
 
-#if BGFX_API_VERSION != 120
+#if BGFX_API_VERSION != 122
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -753,6 +753,10 @@ push_supported(lua_State *L, uint64_t supported) {
 		CAPSNAME(TEXTURE_READ_BACK)     // Read-back texture is supported.
 		CAPSNAME(VERTEX_ATTRIB_HALF)    // Vertex attribute half-float is supported.
 		CAPSNAME(VERTEX_ATTRIB_UINT10)  // Vertex attribute 10_10_10_2 is supported.
+		CAPSNAME(VERTEX_ID)             // Rendering with VertexID only is supported.
+		CAPSNAME(PRIMITIVE_ID)          // PrimitiveID is available in fragment shader.
+		CAPSNAME(VIEWPORT_LAYER_ARRAY)  // Viewport layer is available in vertex shader.
+		CAPSNAME(DRAW_INDIRECT_COUNT)   // Draw indirect with indirect count is supported.
 	};
 	int n = sizeof(flags) / sizeof(flags[0]);
 	lua_createtable(L, 0, n);
@@ -1267,19 +1271,6 @@ lsetDebug(lua_State *L) {
 	}
 	BGFX(set_debug)(flag);
 	return 0;
-}
-
-static int
-lcreateShader(lua_State *L) {
-	size_t sz;
-	const char *s = luaL_checklstring(L, 1, &sz);
-	const bgfx_memory_t * m = BGFX(copy)(s, sz);
-	bgfx_shader_handle_t handle = BGFX(create_shader)(m);
-	if (!BGFX_HANDLE_IS_VALID(handle)) {
-		return luaL_error(L, "create shader failed");
-	}
-	lua_pushinteger(L, BGFX_LUAHANDLE(SHADER, handle));
-	return 1;
 }
 
 static int
@@ -2769,6 +2760,17 @@ getMemory(lua_State *L, int idx) {
 	}
 	luaL_checkudata(L, idx, "BGFX_MEMORY");
 	return bgfxMemory(L, idx);
+}
+
+static int
+lcreateShader(lua_State *L) {
+	const bgfx_memory_t *mem = getMemory(L, 1);
+	bgfx_shader_handle_t handle = BGFX(create_shader)(mem);
+	if (!BGFX_HANDLE_IS_VALID(handle)) {
+		return luaL_error(L, "create shader failed");
+	}
+	lua_pushinteger(L, BGFX_LUAHANDLE(SHADER, handle));
+	return 1;
 }
 
 /*
