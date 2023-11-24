@@ -2717,12 +2717,20 @@ lmemoryBuffer(lua_State *L) {
 		lua_call(L, 0, 3);
 		void * data = lua_touserdata(L, 1);
 		size_t sz = luaL_checkinteger(L, 2);
-		if (lua_isnil(L, 3)) {
+		int t = lua_type(L, 3);
+		if (t == LUA_TNIL) {
 			// no lifetime object
 			void * buffer = newMemory(L, NULL, sz);
 			memcpy(buffer, data, sz);
 			return 1;
+		} else if (t == LUA_TFUNCTION) {
+			// close function
+			void * buffer = newMemory(L, NULL, sz);
+			memcpy(buffer, data, sz);
+			lua_insert(L, 1);
+			lua_call(L, 2, 0);	// close ptr with ptr and sz
 		} else {
+			// with lifetime object
 			newMemory(L, data, sz);
 			return 1;
 		}
