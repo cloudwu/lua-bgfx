@@ -2679,6 +2679,8 @@ lvertexConvert(lua_State *L) {
 		integer size
 	type 5 :
 		userdata data
+	type 6 :
+		function() returns lightuserdata, size, lifetime(opt)
  */
 static int
 lmemoryBuffer(lua_State *L) {
@@ -2709,6 +2711,21 @@ lmemoryBuffer(lua_State *L) {
 		lua_settop(L, 1);
 		newMemory(L, data, sz);
 		return 1;
+	} else if (t == LUA_TFUNCTION) {
+		// type 6
+		lua_settop(L, 1);
+		lua_call(L, 0, 3);
+		void * data = lua_touserdata(L, 1);
+		size_t sz = luaL_checkinteger(L, 2);
+		if (lua_isnil(L, 3)) {
+			// no lifetime object
+			void * buffer = newMemory(L, NULL, sz);
+			memcpy(buffer, data, sz);
+			return 1;
+		} else {
+			newMemory(L, data, sz);
+			return 1;
+		}
 	}
 	const char * str = luaL_checklstring(L, 1, &sz);
 	if (lua_gettop(L) == 1) {
