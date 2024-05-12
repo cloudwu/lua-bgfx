@@ -1294,34 +1294,7 @@ wEndListBox(lua_State *L) {
 	return 0;
 }
 
-static int
-get_listitem_func(lua_State *L) {
-	int n = lua_tointeger(L, 2);
-	lua_geti(L, 1, n);
-	return 1;
-}
-
-static bool
-get_listitem(void* data, int idx, const char **out_text) {
-	struct lua_args *args = (struct lua_args *)data;
-	lua_State *L = args->L;
-	if (args->err)
-		return 0;
-	lua_pushcfunction(L, get_listitem_func);
-	lua_pushvalue(L, INDEX_ARGS);
-	lua_pushinteger(L, idx+1);
-	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
-		args->err = true;
-		return 0;
-	}
-	if (lua_type(L, -1) == LUA_TSTRING) {
-		*out_text = lua_tostring(L, -1);
-		return true;
-	}
-	lua_pop(L, 1);
-	*out_text = NULL;
-	return false;
-}
+#define MAX_ITEM 4096
 
 static int
 wListBox(lua_State *L) {
@@ -1331,9 +1304,19 @@ wListBox(lua_State *L) {
 	int n = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 	int height_in_items = read_field_int(L, "height", -1);
-	struct lua_args args = { L, false };
 	int current = read_field_int(L, "current", 0) - 1;
-	bool change = ImGui::ListBox(label, &current, get_listitem, &args, n, height_in_items);
+	const char * items[MAX_ITEM];
+	if (n > MAX_ITEM)
+		n = MAX_ITEM;
+	int i;
+	for (i=1;i<=n;i++) {
+		if (lua_geti(L, INDEX_ARGS, i) != LUA_TSTRING)
+			return luaL_error(L, "Invalid item at %d", i);
+		items[i-1] = lua_tostring(L, -1);
+		lua_pop(L, 1);
+	}
+	
+	bool change = ImGui::ListBox(label, &current, items, n, height_in_items);
 	if (change) {
 		lua_pushinteger(L, current+1);
 		lua_setfield(L, INDEX_ARGS, "current");
@@ -1958,8 +1941,8 @@ uGetItemRectSize(lua_State *L) {
 }
 
 static int
-uSetItemAllowOverlap(lua_State *L) {
-	ImGui::SetItemAllowOverlap();
+uSetNextItemAllowOverlap(lua_State *L) {
+	ImGui::SetNextItemAllowOverlap();
 	return 0;
 }
 
@@ -2066,7 +2049,7 @@ static struct enum_pair eSelectableFlags[] = {
 static struct enum_pair eTreeNodeFlags[] = {
 	ENUM(ImGuiTreeNodeFlags, Selected),
 	ENUM(ImGuiTreeNodeFlags, Framed),
-	ENUM(ImGuiTreeNodeFlags, AllowItemOverlap),
+	ENUM(ImGuiTreeNodeFlags, AllowOverlap),
 	ENUM(ImGuiTreeNodeFlags, NoTreePushOnOpen),
 	ENUM(ImGuiTreeNodeFlags, NoAutoOpenOnLog),
 	ENUM(ImGuiTreeNodeFlags, DefaultOpen),
@@ -2097,7 +2080,6 @@ static struct enum_pair eWindowFlags[] = {
 	ENUM(ImGuiWindowFlags, NoBringToFrontOnFocus),
 	ENUM(ImGuiWindowFlags, AlwaysVerticalScrollbar),
 	ENUM(ImGuiWindowFlags, AlwaysHorizontalScrollbar),
-	ENUM(ImGuiWindowFlags, AlwaysUseWindowPadding),
 	ENUM(ImGuiWindowFlags, NoNavInputs),
 	ENUM(ImGuiWindowFlags, NoNavFocus),
 	ENUM(ImGuiWindowFlags, UnsavedDocument),
@@ -2305,7 +2287,7 @@ luaopen_bgfx_imgui(lua_State *L) {
 		{ "GetItemRectMin", uGetItemRectMin },
 		{ "GetItemRectMax", uGetItemRectMax },
 		{ "GetItemRectSize", uGetItemRectSize },
-		{ "SetItemAllowOverlap", uSetItemAllowOverlap },
+		{ "SetNextItemAllowOverlap", uSetNextItemAllowOverlap },
 		{ "LoadIniSettings", uLoadIniSettings },
 		{ "SaveIniSettings", uSaveIniSettings },
 		{ NULL, NULL },

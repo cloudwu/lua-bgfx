@@ -3,7 +3,7 @@ BGFXSRC = ../bgfx
 BXSRC = ../bx
 BIMGSRC = ../bimg
 LUAINC = -I/usr/local/include
-LUALIB = -L/usr/local/bin -llua54
+LUALIB = -L/usr/local/bin -L$(MINGW)/bin -llua54
 SDLINC = -I../SDL/include
 SDLLIB = -Lbin -lSDL2
 

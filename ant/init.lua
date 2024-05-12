@@ -16,7 +16,8 @@ function ant.init(args)
 		reset = args.reset,
 		debug = args.debug,
 		profile = args.profile,
-		getlog = args.getlog,
+		pushlog = args.pushlog,
+		pushlog_context = args.pushlog_context,
 		numBackBuffers = args.numBackBuffers,
 		maxFrameLatency = args.maxFrameLatency,
 

@@ -21,7 +21,7 @@
 #include <android/log.h>
 #endif
 
-#if BGFX_API_VERSION != 122
+#if BGFX_API_VERSION != 127
 #   error BGFX_API_VERSION mismatch
 #endif
 
@@ -101,12 +101,14 @@ struct log_cache {
 	char log[MAX_LOGBUFFER];
 };
 
+typedef void (*bgfx_pushlog)(void* context, const char *file, uint16_t line, const char *format, va_list ap);
+
 struct callback {
 	bgfx_callback_interface_t base;
 	struct screenshot_queue ss;
-	struct log_cache lc;
 	uint32_t filterlog;
-	bool getlog;
+	bgfx_pushlog pushlog;
+	void* pushlog_context;
 };
 
 static int
@@ -273,6 +275,14 @@ getfield(lua_State *L, const char *key) {
 }
 
 static int
+getfield_int(lua_State *L, const char *key) {
+	lua_getfield(L, 1, key);
+	int v = lua_tointeger(L, -1);
+	lua_pop(L, 1);
+	return v;
+}
+
+static int
 lsetPlatformData(lua_State *L) {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	bgfx_platform_data_t bpdt;
@@ -283,6 +293,7 @@ lsetPlatformData(lua_State *L) {
 	bpdt.context = getfield(L, "context");
 	bpdt.backBuffer = getfield(L, "backBuffer");
 	bpdt.backBufferDS = getfield(L, "backBufferDS");
+	bpdt.type = (bgfx_native_window_handle_type_t)getfield_int(L, "type");
 	
 	BGFX(set_platform_data)(&bpdt);
 
@@ -296,38 +307,13 @@ renderer_type_id(lua_State *L, int index) {
 #define RENDERER_TYPE_ID(x) else if (strcmp(type, #x) == 0) id = BGFX_RENDERER_TYPE_##x
 	if (0) ;
 	RENDERER_TYPE_ID(NOOP);
-	RENDERER_TYPE_ID(DIRECT3D9);
 	RENDERER_TYPE_ID(DIRECT3D11);
 	RENDERER_TYPE_ID(DIRECT3D12);
-	RENDERER_TYPE_ID(GNM);
 	RENDERER_TYPE_ID(METAL);
-	RENDERER_TYPE_ID(NVN);
-	RENDERER_TYPE_ID(OPENGLES);
-	RENDERER_TYPE_ID(OPENGL);
 	RENDERER_TYPE_ID(VULKAN);
 	else return luaL_error(L, "Invalid renderer type %s", type);
 
 	return id;
-}
-
-static void
-append_log(struct log_cache *lc, const char * buffer, int n) {
-	spin_lock(lc);
-	int sz = (int)(lc->tail - lc->head);	// sz must less than MAX_LOGBUFFER
-	if (sz + n > MAX_LOGBUFFER)
-		n = MAX_LOGBUFFER - sz;
-	int offset = lc->tail % MAX_LOGBUFFER;
-	int part = MAX_LOGBUFFER - offset;
-	if (part >= n) {
-		// only one part
-		memcpy(lc->log + offset, buffer, n);
-	} else {
-		// ring buffer rewind
-		memcpy(lc->log + offset, buffer, part);
-		memcpy(lc->log, buffer + part, n - part);
-	}
-	lc->tail += n;
-	spin_unlock(lc);
 }
 
 static const char*
@@ -385,19 +371,20 @@ trace_filter(const char *format, int level) {
 
 static void
 cb_trace_vargs(bgfx_callback_interface_t *self, const char *file, uint16_t line, const char *format, va_list ap) {
-	char tmp[MAX_LOGBUFFER];
-	int n = sprintf(tmp, "%s (%d): ", file, line);
-
-	n += vsnprintf(tmp+n, sizeof(tmp)-n, format, ap);
-	if (n > MAX_LOGBUFFER) {
-		// truncated
-		n = MAX_LOGBUFFER;
-	}
 	struct callback * cb = (struct callback *)self;
-	if (cb->getlog) {
-		append_log(&(cb->lc), tmp, n);
-	}
 	if (cb->filterlog > 0 && trace_filter(format, cb->filterlog)) {
+		if (cb->pushlog) {
+			cb->pushlog(cb->pushlog_context, file, line, format, ap);
+			return;
+		}
+		char tmp[MAX_LOGBUFFER];
+		int n = sprintf(tmp, "%s (%d): ", file, line);
+
+		n += vsnprintf(tmp+n, sizeof(tmp)-n, format, ap);
+		if (n > MAX_LOGBUFFER) {
+			// truncated
+			n = MAX_LOGBUFFER;
+		}
 #if BX_PLATFORM_ANDROID
 		__android_log_write(ANDROID_LOG_INFO, "bgfx", tmp);
 #else
@@ -634,6 +621,7 @@ linit(lua_State *L) {
 	init.platformData.context = NULL;
 	init.platformData.backBuffer = NULL;
 	init.platformData.backBufferDS = NULL;
+	init.platformData.type = BGFX_NATIVE_WINDOW_HANDLE_TYPE_DEFAULT;
 
 	if (!lua_isnoneornil(L, 1)) {
 		luaL_checktype(L, 1, LUA_TTABLE);
@@ -673,19 +661,17 @@ linit(lua_State *L) {
 		read_uint32(L, 1, "transientIbSize", &init.limits.transientIbSize);
 		read_boolean(L, 1, "debug", &init.debug);
 		read_boolean(L, 1, "profile", &init.profile);
-		read_boolean(L, 1, "getlog", &cb->getlog);
-		if (cb->getlog) {
-			cb->filterlog = 0;	// log none
-		} else {
-			cb->filterlog = 255;	// log all
-		}
+
 		read_uint32(L, 1, "loglevel", &cb->filterlog);
+		cb->pushlog = getfield(L, "pushlog");
+		cb->pushlog_context = getfield(L, "pushlog_context");
 
 		init.platformData.ndt = getfield(L, "ndt");
 		init.platformData.nwh = getfield(L, "nwh");
 		init.platformData.context = getfield(L, "context");
 		init.platformData.backBuffer = getfield(L, "backBuffer");
 		init.platformData.backBufferDS = getfield(L, "backBufferDS");
+		init.platformData.type = (bgfx_native_window_handle_type_t)getfield_int(L, "type");
 
 		//if (init.debug) {
 			luabgfx_getalloc(&init.allocator);
@@ -704,13 +690,9 @@ push_renderer_type(lua_State *L, bgfx_renderer_type_t t) {
 #define RENDERER_TYPE(x) case BGFX_RENDERER_TYPE_##x : st = #x; break
 	switch(t) {
 		RENDERER_TYPE(NOOP);
-		RENDERER_TYPE(DIRECT3D9);
 		RENDERER_TYPE(DIRECT3D11);
 		RENDERER_TYPE(DIRECT3D12);
-		RENDERER_TYPE(GNM);
 		RENDERER_TYPE(METAL);
-		RENDERER_TYPE(OPENGLES);
-		RENDERER_TYPE(OPENGL);
 		RENDERER_TYPE(VULKAN);
 		default: {
 			luaL_error(L, "Unknown renderer type %d", t);
@@ -1112,7 +1094,7 @@ lgetStats(lua_State *L) {
 		break;
 	}
 	default:
-		return luaL_error(L, "Unkown stat format %c", what[i]);
+		return luaL_error(L, "Unknown stat format %c", what[i]);
 	}}
 	return 1;
 }
@@ -3271,7 +3253,12 @@ ldbgTextImage(lua_State *L) {
 	int y = luaL_checkinteger(L, 2);
 	int w = luaL_checkinteger(L, 3);
 	int h = luaL_checkinteger(L, 4);
-	const char * image = luaL_checkstring(L, 5);
+	const char * image;
+	if (lua_isuserdata(L, 5)) {
+		image = (const char *)lua_touserdata(L, 5);
+	} else {
+		image = luaL_checkstring(L, 5);
+	}
 	int pitch = luaL_optinteger(L, 6, 2 * w);
 	BGFX(dbg_text_image)(x,y,w,h,image, pitch);
 	return 0;
@@ -4505,8 +4492,9 @@ lsetViewRect(lua_State *L) {
 static int
 lsetViewName(lua_State *L) {
 	bgfx_view_id_t viewid = luaL_checkinteger(L, 1);
-	const char *name = luaL_checkstring(L, 2);
-	BGFX(set_view_name)(viewid, name);
+	size_t sz;
+	const char *name = luaL_checklstring(L, 2, &sz);
+	BGFX(set_view_name)(viewid, name, sz);
 	return 0;
 }
 
@@ -5061,34 +5049,6 @@ lgetScreenshot(lua_State *L) {
 	return memptr ? 6 : 5;
 }
 
-static int
-lgetLog(lua_State *L) {
-	if (lua_getfield(L, LUA_REGISTRYINDEX, "bgfx_cb") != LUA_TUSERDATA) {
-		return luaL_error(L, "get_log failed!");
-	}
-	struct callback *cb = lua_touserdata(L, -1);
-	struct log_cache *lc = &cb->lc;
-	spin_lock(lc);
-	int offset = lc->head % MAX_LOGBUFFER;
-	int sz = (int)(lc->tail - lc->head);
-
-	int part = MAX_LOGBUFFER - offset;
-
-	if (part >= sz) {
-		// only one part
-		lua_pushlstring(L, lc->log + offset, sz);
-	} else {
-		char tmp[MAX_LOGBUFFER];
-		memcpy(tmp, lc->log + offset, part);
-		memcpy(tmp + part, lc->log, sz - part);
-		lua_pushlstring(L, tmp, sz);
-	}
-	lc->head = lc->tail;
-
-	spin_unlock(lc);
-	return 1;
-}
-
 #define SET_UNIFORM 0
 #define SET_TEXTURE 1
 #define SET_BUFFER 2
@@ -5481,7 +5441,6 @@ luaopen_bgfx(lua_State *L) {
 		{ "init", linit },
 		{ "shutdown", lshutdown },
 
-		{ "get_log", lgetLog },
 		{ "get_screenshot", lgetScreenshot },
 		{ "request_screenshot", lrequestScreenshot },
 
